@@ -3,6 +3,7 @@
 #include "GraphTraversal.h"
 #include "CPUGraph.h"
 #include "GraphStep.h"
+#include "AddVertexStartStep.h"
 
 CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
 : GraphTraversalSource(gr) {
@@ -24,5 +25,13 @@ GraphTraversal* CPUGraphTraversalSource::E() {
 }
 
 GraphTraversal* CPUGraphTraversalSource::addV(){
+	GraphTraversal* trv = new CPUGraphTraversal(this);
+	trv->appendStep(new AddVertexStartStep());
+	return trv;
+}
 
+GraphTraversal* CPUGraphTraversalSource::addV(std::string label){
+	GraphTraversal* trv = new CPUGraphTraversal(this);
+	trv->appendStep(new AddVertexStartStep(label));
+	return trv;
 }

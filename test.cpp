@@ -5,6 +5,8 @@
 
 int main(int argc, char* argv[]) {
 	CPUGraph graph;
-	std::string explanation = graph.traversal()->E()->has("a", "b")->explain();
+	std::string explanation = graph.traversal()->addV()->has("a", "b")->explain();
 	printf("%s\n", explanation.c_str());
+
+	graph.traversal()->addV()->addV()->addV()->V()->iterate();
 }

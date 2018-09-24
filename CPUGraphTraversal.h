@@ -1,7 +1,11 @@
 #include "GraphTraversal.h"
 #include "VertexStep.h"
 #include "GraphStep.h"
+#include "AddVertexStartStep.h"
+#include "AddVertexStep.h"
 #include "HasStep.h"
+#include "Traverser.h"
+#include <algorithm>
 
 class CPUGraphTraversal : public GraphTraversal {
 	public:
@@ -27,15 +31,29 @@ class CPUGraphTraversal : public GraphTraversal {
 		/**
 			Performs each step of the traversal.
 		**/
-		void process() {
+		virtual void iterate() {
+			std::vector<Traverser<void*>*> traversers; //TODO actually use these to traverse
 			unsigned int index = 0;
 			while(index < steps.size()) {
 				switch(steps[index]->uid) {
 					case GRAPH_STEP:
-						getGraph()->vertices();
-						break;
-					default:
-						break;
+						{
+							std::vector<Vertex*> vertices = getGraph()->vertices();
+							for_each(vertices.begin(), vertices.end(), [](Vertex* v){printf("%llu\n", *((uint64_t*)v->id()));});
+							// For each traverser, a traverser should be created for each Vertex and passed to the next step
+							break;
+						}
+					case ADD_VERTEX_STEP:
+						{
+							// For each traverser ...
+							((CPUGraph*)getGraph())->add_vertex();
+							// For each traverser, a new Vertex should be created and replace the original traverser
+							break;
+						}
+					case ADD_VERTEX_START_STEP:
+						{
+							((CPUGraph*)getGraph())->add_vertex();
+						}
 				}
 
 				index++;

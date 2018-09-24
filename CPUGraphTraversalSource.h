@@ -10,6 +10,7 @@ class CPUGraphTraversalSource : public GraphTraversalSource {
 		GraphTraversal* V();
 		GraphTraversal* E();
 		GraphTraversal* addV();
+		GraphTraversal* addV(std::string label);
 };
 
 #endif
