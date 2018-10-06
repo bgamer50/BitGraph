@@ -5,6 +5,7 @@
 #include "AddVertexStep.h"
 #include "HasStep.h"
 #include "Traverser.h"
+#include "NoOpStep.h"
 #include <algorithm>
 
 class CPUGraphTraversal : public GraphTraversal {
@@ -53,6 +54,28 @@ class CPUGraphTraversal : public GraphTraversal {
 					case ADD_VERTEX_START_STEP:
 						{
 							((CPUGraph*)getGraph())->add_vertex();
+						}
+					case ADD_EDGE_STEP:
+						{
+							// There has to be a from or to step (or both) AFTER the add edge step
+							// It is safe to kick these steps out once they are combined with the addE().
+							if(steps.size() < index + 1) {
+								TraversalStep* next_step = steps[index + 1];
+								if(next_step.uid == TO_STEP || next_step.uid == FROM_STEP) {
+									// modify the addE with the to or from step
+									steps[index + 1] = new NoOpStep();
+								}
+							}
+							if(steps.size() < index + 2) {
+								TraversalStep* next_step = steps[index + 2];
+								if(next_step.uid == TO_STEP || next_step.uid == FROM_STEP) {
+									// modify the addE with the to or from step
+									steps[index + 2] = new NoOpStep();
+								}
+							}
+							
+							// Need to check if there is enough info to add the Edge, then add it
+							// if we can.
 						}
 				}
 
