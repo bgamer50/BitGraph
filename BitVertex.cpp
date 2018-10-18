@@ -36,3 +36,13 @@ std::string const* BitVertex::label() {
 bool BitVertex::hasLabel() {
 	return has_label;
 }
+
+/*
+	Add an edge to this Vertex in the
+	given direction.  Checks to make
+	sure the Edge makes sense.
+*/
+void BitVertex::addEdge(BitEdge* new_edge, Direction dir) {
+	if(dir == OUT && new_edge->outV() == this) edges_out.push_back(new_edge);
+	else if(dir == IN && new_edge->inV() == this) edges_in.push_back(new_edge);
+}

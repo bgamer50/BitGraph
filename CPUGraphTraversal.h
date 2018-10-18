@@ -14,6 +14,27 @@ class CPUGraphTraversal : public GraphTraversal {
 		: GraphTraversal(src) {
 			// do nothing
 		}
+
+		/*
+			Perform BitGraph-specific optimizations
+		*/
+		virtual void getInitialTraversal() {
+			// Have GraphTraversal do its optimizations first.
+			GraphTraversal::getInitialTraversal();
+
+			// No optimizations if this is empty.
+			if(steps.empty()) return;
+
+			// Convert g.E() into g.V().outE()
+			if(steps[0]->uid == GRAPH_STEP) {
+				GraphStep* graph_step = (GraphStep*)steps[0];
+				if(graph_step->getType() == EDGE) {
+					steps[0] = new GraphStep(VERTEX);
+					steps.emplace(steps.begin() + 1, new VertexStep(OUT, EDGE));
+				}
+			}
+		}
+
 		/**
 			Processes the traversal if not already processed and returns the next traversal result.
 		**/
@@ -33,8 +54,40 @@ class CPUGraphTraversal : public GraphTraversal {
 			Performs each step of the traversal.
 		**/
 		virtual void iterate() {
+			// Get the initial optimized traversal using the parent's method.
+			this->getInitialTraversal();
+
+			// Return and do nothing if there is nothing to execute.
+			if(steps.empty()) {
+				return;
+			}
+
 			std::vector<Traverser<void*>*> traversers; //TODO actually use these to traverse
-			unsigned int index = 0;
+
+			// Handle the start step (GraphStep(Vertex), GraphStep(Edge), or AddEdgeStartStep)
+			switch(steps[0]->type) {
+				case GRAPH_STEP: {
+					GraphStep* graph_step = (GraphStep*)steps[0];
+					if(graph_step->getType() == VERTEX) {
+						// Create one traverser for each Vertex in the Graph.
+						std::vector<Vertex*> vertices = getGraph()->vertices();
+						for_each(vertices.begin(), vertices.end(), [](Vertex* v){ traversers.push_back((void*)v); });
+					}
+					else if(graph_step->getType() == EDGE) {
+						// Create one traverser for each Edge in the Graph.
+
+					}
+					break;
+				}
+				case ADD_EDGE_START_STEP: {
+					break;
+				}
+				default: {
+					// TODO throw exception
+				}
+			}
+
+			unsigned int index = 1;
 			while(index < steps.size()) {
 				switch(steps[index]->uid) {
 					case GRAPH_STEP:
@@ -57,25 +110,12 @@ class CPUGraphTraversal : public GraphTraversal {
 						}
 					case ADD_EDGE_STEP:
 						{
-							// There has to be a from or to step (or both) AFTER the add edge step
-							// It is safe to kick these steps out once they are combined with the addE().
-							if(steps.size() < index + 1) {
-								TraversalStep* next_step = steps[index + 1];
-								if(next_step.uid == TO_STEP || next_step.uid == FROM_STEP) {
-									// modify the addE with the to or from step
-									steps[index + 1] = new NoOpStep();
-								}
-							}
-							if(steps.size() < index + 2) {
-								TraversalStep* next_step = steps[index + 2];
-								if(next_step.uid == TO_STEP || next_step.uid == FROM_STEP) {
-									// modify the addE with the to or from step
-									steps[index + 2] = new NoOpStep();
-								}
-							}
-							
+														
 							// Need to check if there is enough info to add the Edge, then add it
 							// if we can.
+
+
+							// We must throw an exception if there is an issue with the addEdge step.
 							
 						}
 				}

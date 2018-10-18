@@ -24,14 +24,20 @@ GraphTraversal* CPUGraphTraversalSource::E() {
 	return this->V()->outE();
 }
 
-GraphTraversal* CPUGraphTraversalSource::addV(){
+GraphTraversal* CPUGraphTraversalSource::addV() {
 	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new AddVertexStartStep());
 	return trv;
 }
 
-GraphTraversal* CPUGraphTraversalSource::addV(std::string label){
+GraphTraversal* CPUGraphTraversalSource::addV(std::string label) {
 	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new AddVertexStartStep(label));
+	return trv;
+}
+
+GraphTraversal* CPUGraphTraversalSource::addE(std::string labeL) {
+	GraphTraversal* trv = new CPUGraphTraversal(this);
+	trv->appendStep(new AddEdgeStartStep(label));
 	return trv;
 }
