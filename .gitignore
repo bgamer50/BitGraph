@@ -4,3 +4,4 @@
 *.so
 *.lib
 *.exe
+*.stackdump
