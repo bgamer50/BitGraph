@@ -10,6 +10,7 @@ class CPUGraph : public Graph {
 	private:
 		std::vector<Vertex*> vertex_list;
 		std::vector<Edge*> edge_list;
+		uint64_t next_edge_id = 0;
 	public:
 
 		/*
@@ -41,11 +42,18 @@ class CPUGraph : public Graph {
 		Vertex* add_vertex();
 
 		/*
+			Adds a new Edge to this CPUGraph.
+			Currently not part of the higher-level api.
+		*/
+		Edge* add_edge(BitVertex* out, BitVertex* in, std::string label);
+
+		/*
 			Get a traversal source for this CPUGraph.
 		*/
 		GraphTraversalSource* traversal();
 }; 
 
 #define NEXT_VERTEX_ID_CPU() ( vertex_list.size() == 0 ? 0 : (*((uint64_t*)vertex_list.back()->id()) + 1) )
+#define NEXT_EDGE_ID_CPU() ((uint64_t)( next_edge_id++ ))
 
 #endif

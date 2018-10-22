@@ -1,18 +1,29 @@
+#include "NoOpStep.h"
 #include "GraphTraversal.h"
 #include "VertexStep.h"
 #include "GraphStep.h"
 #include "AddVertexStartStep.h"
 #include "AddVertexStep.h"
+#include "AddEdgeStartStep.h"
+#include "AddEdgeStep.h"
 #include "HasStep.h"
 #include "Traverser.h"
-#include "NoOpStep.h"
 #include <algorithm>
+#include <iostream>
+
+#ifndef CPU_GRAPH_TRAVERSAL_H
+#define CPU_GRAPH_TRAVERSAL_H
 
 class CPUGraphTraversal : public GraphTraversal {
 	public:
 		CPUGraphTraversal(GraphTraversalSource* src)
 		: GraphTraversal(src) {
 			// do nothing
+		}
+
+		CPUGraphTraversal(GraphTraversalSource* src, GraphTraversal* anonymous_traversal) 
+		: GraphTraversal(src) {
+			this->steps = anonymous_traversal->getSteps();
 		}
 
 		/*
@@ -29,7 +40,7 @@ class CPUGraphTraversal : public GraphTraversal {
 			if(steps[0]->uid == GRAPH_STEP) {
 				GraphStep* graph_step = (GraphStep*)steps[0];
 				if(graph_step->getType() == EDGE) {
-					steps[0] = new GraphStep(VERTEX);
+					steps[0] = new GraphStep(VERTEX, {});
 					steps.emplace(steps.begin() + 1, new VertexStep(OUT, EDGE));
 				}
 			}
@@ -51,10 +62,107 @@ class CPUGraphTraversal : public GraphTraversal {
 		}
 
 		/**
+			Given some initial traversers, execute this CPUGraphTraversal.
+		**/
+		virtual std::vector<Traverser<void*>*>* execute(std::vector<Traverser<void*>*>* traversers) {
+			for(unsigned int index = 0; index < steps.size(); index++) {
+				switch(steps[index]->uid) {
+					case GRAPH_STEP: // we implicitly assume this is a Vertex Graph step.
+						{
+							// For each traverser, a traverser should be created for each Vertex and passed to the next step
+							std::vector<Vertex*> vertices = getGraph()->vertices();
+
+							// Make map of element ids to counts
+							std::vector<void*> element_ids = ((GraphStep*)steps[index])->get_element_ids();
+							std::map<uint64_t, unsigned long> element_id_counts;
+							for_each(element_ids.begin(), element_ids.end(), [&](void* id_ptr){
+								uint64_t id = *((uint64_t*)id);
+								if(element_id_counts.find(id) != element_id_counts.end()) element_id_counts[id]++;
+								else element_id_counts[id] = 1;
+							});
+
+							std::vector<Traverser<void*>*>* new_traversers = new std::vector<Traverser<void*>*>;
+							for_each(traversers->begin(), traversers->end(), [&](Traverser<void*>* trv) {
+								for_each(vertices.begin(), vertices.end(), [&](Vertex* v) { 
+									// TODO this is still inefficient; there is probably a better way to get vertices.
+									uint64_t id = *((uint64_t*)v->id());
+									if(element_id_counts.find(id) != element_id_counts.end()) {
+										for(auto k = 0; k < element_id_counts[id]; k++) new_traversers->push_back(new Traverser<void*>((void*)v)); 
+									}
+								});
+							});
+
+							delete traversers;
+							traversers = new_traversers;
+							break;
+						}
+					case ADD_VERTEX_STEP:
+						{
+							// For each traverser, a new Vertex should be created and replace the original traverser
+							for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
+								Vertex* v = ((CPUGraph*)this->getGraph())->add_vertex();
+								trv->replace_data((void*)v);
+							});
+							break;
+						}
+					case ADD_EDGE_STEP:
+						{
+							// For each traverser
+							for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
+								// Need to check if there is enough info to add the Edge, then add it
+								// if we can.
+								// For now we will be strict and require that the user explicity specify from() and to() traversals.
+								CPUGraphTraversal* from_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[index])->get_out_traversal());
+								CPUGraphTraversal* to_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[index])->get_in_traversal());
+								std::string label = ((AddEdgeStep*)steps[index])->get_label();
+
+								BitVertex* from_vertex;
+								BitVertex* to_vertex;
+								bool used_current_traverser = false;
+								if(from_traversal == NULL) {
+									from_vertex = (BitVertex*)(*trv->get());
+									used_current_traverser = true;
+									if(from_vertex->magic != VERTEX_MAGIC_NUMBER) {
+										throw new runtime_error("Attempted to use implicit from() on object that is not a Vertex."); 
+									}
+								} else { from_vertex = (BitVertex*)this->get_next(traversers, from_traversal); }
+
+								if(to_traversal == NULL) {
+									if(used_current_traverser) {
+										throw new std::runtime_error("No from/to step was provided.");
+									}
+									to_vertex = (BitVertex*)(*trv->get());
+									if(to_vertex->magic != VERTEX_MAGIC_NUMBER) {
+										throw new runtime_error("Attempted to use implicit to() on object that is not a Vertex.");
+									}
+								} else { to_vertex = (BitVertex*)this->get_next(traversers, to_traversal); }
+								
+								BitEdge* new_edge = (BitEdge*)((CPUGraph*)this->getGraph())->add_edge(from_vertex, to_vertex, label);
+								trv->replace_data((void*)new_edge);
+
+								// Clean up completed traversals
+								delete from_traversal;
+								delete to_traversal;
+							});
+
+							break;
+						}
+
+					default: {
+
+						// TODO throw exception
+						break;
+					}
+				}
+
+			}
+		}
+
+		/**
 			Performs each step of the traversal.
 		**/
 		virtual void iterate() {
-			// Get the initial optimized traversal using the parent's method.
+			// Get the initial optimized traversal.
 			this->getInitialTraversal();
 
 			// Return and do nothing if there is nothing to execute.
@@ -62,24 +170,47 @@ class CPUGraphTraversal : public GraphTraversal {
 				return;
 			}
 
-			std::vector<Traverser<void*>*> traversers; //TODO actually use these to traverse
+			std::vector<Traverser<void*>*>* traversers = new std::vector<Traverser<void*>*>; // Will use these to traverse
 
 			// Handle the start step (GraphStep(Vertex), GraphStep(Edge), or AddEdgeStartStep)
-			switch(steps[0]->type) {
+			switch(steps[0]->uid) {
 				case GRAPH_STEP: {
 					GraphStep* graph_step = (GraphStep*)steps[0];
 					if(graph_step->getType() == VERTEX) {
 						// Create one traverser for each Vertex in the Graph.
 						std::vector<Vertex*> vertices = getGraph()->vertices();
-						for_each(vertices.begin(), vertices.end(), [](Vertex* v){ traversers.push_back((void*)v); });
+						for_each(vertices.begin(), vertices.end(), [&traversers](Vertex* v){ traversers->push_back(new Traverser<void*>((void*)v)); });
 					}
 					else if(graph_step->getType() == EDGE) {
-						// Create one traverser for each Edge in the Graph.
-
+						// TODO this should never be true since getInitialTraversal() is called.
 					}
 					break;
 				}
+				case ADD_VERTEX_START_STEP: {
+					Vertex* v = ((CPUGraph*)this->getGraph())->add_vertex();
+					traversers->push_back(new Traverser<void*>((void*)v));
+					break;
+				}
 				case ADD_EDGE_START_STEP: {
+					// Need to check if there is enough info to add the Edge, then add it
+					// if we can.
+					// from() and to() are both always required here.
+					CPUGraphTraversal* from_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[0])->get_out_traversal());
+					CPUGraphTraversal* to_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[0])->get_in_traversal());
+					std::string label = ((AddEdgeStep*)steps[0])->get_label();
+
+					BitVertex* from_vertex;
+					BitVertex* to_vertex;
+					if(from_traversal == NULL) {
+						throw new std::runtime_error("No from step was provided.");
+					} else { from_vertex = (BitVertex*)this->get_next(traversers, from_traversal); }
+
+					if(to_traversal == NULL) {
+						throw new std::runtime_error("No to step was provided.");
+					} else { to_vertex = (BitVertex*)this->get_next(traversers, to_traversal); }
+					
+					BitEdge* new_edge = (BitEdge*)((CPUGraph*)this->getGraph())->add_edge(from_vertex, to_vertex, label);
+					traversers->push_back(new Traverser<void*>((void*)new_edge));
 					break;
 				}
 				default: {
@@ -87,40 +218,43 @@ class CPUGraphTraversal : public GraphTraversal {
 				}
 			}
 
-			unsigned int index = 1;
-			while(index < steps.size()) {
-				switch(steps[index]->uid) {
-					case GRAPH_STEP:
-						{
-							std::vector<Vertex*> vertices = getGraph()->vertices();
-							for_each(vertices.begin(), vertices.end(), [](Vertex* v){printf("%llu\n", *((uint64_t*)v->id()));});
-							// For each traverser, a traverser should be created for each Vertex and passed to the next step
-							break;
-						}
-					case ADD_VERTEX_STEP:
-						{
-							// For each traverser ...
-							((CPUGraph*)getGraph())->add_vertex();
-							// For each traverser, a new Vertex should be created and replace the original traverser
-							break;
-						}
-					case ADD_VERTEX_START_STEP:
-						{
-							((CPUGraph*)getGraph())->add_vertex();
-						}
-					case ADD_EDGE_STEP:
-						{
-														
-							// Need to check if there is enough info to add the Edge, then add it
-							// if we can.
+			this->execute(traversers);
+		}
 
+		/*
+			Create a copy of this traversal's traversers.  Used when some anonymous traversal needs to be passed the
+			existing traversers; obviously we to maintain the current traverser status.
+		*/
+		inline std::vector<Traverser<void*>*>* copy_traversers(std::vector<Traverser<void*>*>* old_traversers) {
+			std::vector<Traverser<void*>*>* new_traversers = new std::vector<Traverser<void*>*>;
+			for_each(old_traversers->begin(), old_traversers->end(), [&new_traversers](Traverser<void*>* trv){
+				new_traversers->push_back(new Traverser<void*>(*trv->get()));
+			});
 
-							// We must throw an exception if there is an issue with the addEdge step.
-							
-						}
-				}
+			return new_traversers;
+		}
 
-				index++;
-			}
-		};
+		/*
+			Get the next object from the given traversal.  Makes a copy of the given traversers.
+		*/
+		inline void* get_next(std::vector<Traverser<void*>*>* traversers, CPUGraphTraversal* traversal) {
+			// Call execute in the given traversal with a copy of the current traversers.
+			std::vector<Traverser<void*>*>* temporary_traversers = this->copy_traversers(traversers);
+			temporary_traversers = traversal->execute(temporary_traversers);
+
+			// Make sure the traversal evaluated to something.
+			if(temporary_traversers->empty()) throw new std::runtime_error("Traversal evaluated to empty set!");
+			
+			// Correct behavior is grabbing the first traverser and ignoring any others.
+			Traverser<void*>* out_traverser = temporary_traversers->at(0);
+			void* next_object = out_traverser->get();
+
+			// Ensure memory for the temporary traversers is cleared.
+			for_each(temporary_traversers->begin(), temporary_traversers->end(), [](Traverser<void*>* trv) { delete trv; });
+			delete temporary_traversers;
+
+			return next_object;
+		}
 };
+
+#endif

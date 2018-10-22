@@ -4,6 +4,7 @@
 #include "CPUGraph.h"
 #include "GraphStep.h"
 #include "AddVertexStartStep.h"
+#include "AddEdgeStartStep.h"
 
 CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
 : GraphTraversalSource(gr) {
@@ -36,7 +37,7 @@ GraphTraversal* CPUGraphTraversalSource::addV(std::string label) {
 	return trv;
 }
 
-GraphTraversal* CPUGraphTraversalSource::addE(std::string labeL) {
+GraphTraversal* CPUGraphTraversalSource::addE(std::string label) {
 	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new AddEdgeStartStep(label));
 	return trv;

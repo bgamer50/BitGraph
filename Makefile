@@ -15,8 +15,8 @@ ifeq ($(shell uname -s), Linux)
 endif
 
 
-lib: CPUGraph.o CPUGraphTraversalSource.o BitVertex.o
-	$(CC) $(CFLAGS) -o $(LIBBITGRAPH_NAME)  -lgremlin -shared CPUGraph.o CPUGraphTraversalSource.o BitVertex.o
+lib: CPUGraph.o CPUGraphTraversalSource.o BitVertex.o BitEdge.o
+	$(CC) $(CFLAGS) -o $(LIBBITGRAPH_NAME) -lgremlin -shared CPUGraph.o CPUGraphTraversalSource.o BitVertex.o BitEdge.o
 	mv $(LIBBITGRAPH_NAME) $(LIBBITGRAPH_PATH)
 	chmod 755 $(LIBBITGRAPH_PATH)
 
@@ -28,6 +28,9 @@ CPUGraphTraversalSource.o: CPUGraphTraversalSource.cpp
 
 BitVertex.o: BitVertex.cpp
 	$(CC) $(CFLAGS) -o BitVertex.o -c -I../gremlin++ BitVertex.cpp
+
+BitEdge.o: BitEdge.cpp
+	$(CC) $(CFLAGS) -o BitEdge.o -c -I../gremlin++ BitEdge.cpp
 
 test.exe: test.cpp
 	$(CC) $(CFLAGS) -o test.exe -I../gremlin++ test.cpp -lgremlin -lbitgraph

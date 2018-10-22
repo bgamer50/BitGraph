@@ -31,3 +31,10 @@ Vertex* CPUGraph::add_vertex() {
 	vertex_list.push_back(v);
 	return v;
 }
+
+Edge* CPUGraph::add_edge(BitVertex* from_vertex, BitVertex* to_vertex, std::string label) {
+	BitEdge* new_edge = new BitEdge(NEXT_EDGE_ID_CPU(), from_vertex, to_vertex, label);
+	from_vertex->addEdge(new_edge, OUT);
+	to_vertex->addEdge(new_edge, IN);
+	return new_edge;
+}
