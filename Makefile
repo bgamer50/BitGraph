@@ -20,17 +20,22 @@ lib: CPUGraph.o CPUGraphTraversalSource.o BitVertex.o BitEdge.o
 	mv $(LIBBITGRAPH_NAME) $(LIBBITGRAPH_PATH)
 	chmod 755 $(LIBBITGRAPH_PATH)
 
-CPUGraph.o: CPUGraph.cpp
+CPUGraph.o: CPUGraph.cpp CPUGraph.h
 	$(CC) $(CFLAGS) -o CPUGraph.o -c -I../gremlin++ CPUGraph.cpp
 
-CPUGraphTraversalSource.o: CPUGraphTraversalSource.cpp
+CPUGraphTraversalSource.o: CPUGraphTraversalSource.cpp CPUGraphTraversalSource.h
 	$(CC) $(CFLAGS) -o CPUGraphTraversalSource.o -c -I../gremlin++ CPUGraphTraversalSource.cpp
 
-BitVertex.o: BitVertex.cpp
+BitVertex.o: BitVertex.cpp BitVertex.h
 	$(CC) $(CFLAGS) -o BitVertex.o -c -I../gremlin++ BitVertex.cpp
 
-BitEdge.o: BitEdge.cpp
+BitEdge.o: BitEdge.cpp BitEdge.h
 	$(CC) $(CFLAGS) -o BitEdge.o -c -I../gremlin++ BitEdge.cpp
+
+test: test.exe
+	./test.exe > test/test.stdout 2> test/test.stderr
+	diff -b test/test.stdout test/expected.stdout
+	diff -b test/test.stderr test/expected.stderr
 
 test.exe: test.cpp
 	$(CC) $(CFLAGS) -o test.exe -I../gremlin++ test.cpp -lgremlin -lbitgraph

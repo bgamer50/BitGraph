@@ -9,7 +9,8 @@
 #include "HasStep.h"
 #include "Traverser.h"
 #include <algorithm>
-#include <iostream>
+#include <stdlib.h>
+#include <exception>
 
 #ifndef CPU_GRAPH_TRAVERSAL_H
 #define CPU_GRAPH_TRAVERSAL_H
@@ -23,7 +24,8 @@ class CPUGraphTraversal : public GraphTraversal {
 
 		CPUGraphTraversal(GraphTraversalSource* src, GraphTraversal* anonymous_traversal) 
 		: GraphTraversal(src) {
-			this->steps = anonymous_traversal->getSteps();
+			std::vector<TraversalStep*> new_steps = anonymous_traversal->getSteps();
+			for_each(new_steps.begin(), new_steps.end(), [this](TraversalStep* s){this->steps.push_back(s);});
 		}
 
 		/*
@@ -76,18 +78,20 @@ class CPUGraphTraversal : public GraphTraversal {
 							std::vector<void*> element_ids = ((GraphStep*)steps[index])->get_element_ids();
 							std::map<uint64_t, unsigned long> element_id_counts;
 							for_each(element_ids.begin(), element_ids.end(), [&](void* id_ptr){
-								uint64_t id = *((uint64_t*)id);
+								uint64_t id = *((uint64_t*)id_ptr);
 								if(element_id_counts.find(id) != element_id_counts.end()) element_id_counts[id]++;
 								else element_id_counts[id] = 1;
 							});
 
 							std::vector<Traverser<void*>*>* new_traversers = new std::vector<Traverser<void*>*>;
+							// For each traverser...
 							for_each(traversers->begin(), traversers->end(), [&](Traverser<void*>* trv) {
 								for_each(vertices.begin(), vertices.end(), [&](Vertex* v) { 
 									// TODO this is still inefficient; there is probably a better way to get vertices.
 									uint64_t id = *((uint64_t*)v->id());
 									if(element_id_counts.find(id) != element_id_counts.end()) {
 										for(auto k = 0; k < element_id_counts[id]; k++) new_traversers->push_back(new Traverser<void*>((void*)v)); 
+										// TODO retain side effect information
 									}
 								});
 							});
@@ -112,8 +116,11 @@ class CPUGraphTraversal : public GraphTraversal {
 								// Need to check if there is enough info to add the Edge, then add it
 								// if we can.
 								// For now we will be strict and require that the user explicity specify from() and to() traversals.
-								CPUGraphTraversal* from_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[index])->get_out_traversal());
-								CPUGraphTraversal* to_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[index])->get_in_traversal());
+								GraphTraversalSource* my_traversal_source = this->getTraversalSource();
+								if(my_traversal_source == NULL) throw std::runtime_error("Cannot call this step from an anonymous traversal!");
+
+								CPUGraphTraversal* from_traversal = new CPUGraphTraversal(my_traversal_source, ((AddEdgeStep*)steps[index])->get_out_traversal());
+								CPUGraphTraversal* to_traversal = new CPUGraphTraversal(my_traversal_source, ((AddEdgeStep*)steps[index])->get_in_traversal());
 								std::string label = ((AddEdgeStep*)steps[index])->get_label();
 
 								BitVertex* from_vertex;
@@ -123,17 +130,17 @@ class CPUGraphTraversal : public GraphTraversal {
 									from_vertex = (BitVertex*)(*trv->get());
 									used_current_traverser = true;
 									if(from_vertex->magic != VERTEX_MAGIC_NUMBER) {
-										throw new runtime_error("Attempted to use implicit from() on object that is not a Vertex."); 
+										throw std::runtime_error("Attempted to use implicit from() on object that is not a Vertex."); 
 									}
 								} else { from_vertex = (BitVertex*)this->get_next(traversers, from_traversal); }
 
 								if(to_traversal == NULL) {
 									if(used_current_traverser) {
-										throw new std::runtime_error("No from/to step was provided.");
+										throw std::runtime_error("No from/to step was provided.");
 									}
 									to_vertex = (BitVertex*)(*trv->get());
 									if(to_vertex->magic != VERTEX_MAGIC_NUMBER) {
-										throw new runtime_error("Attempted to use implicit to() on object that is not a Vertex.");
+										throw std::runtime_error("Attempted to use implicit to() on object that is not a Vertex.");
 									}
 								} else { to_vertex = (BitVertex*)this->get_next(traversers, to_traversal); }
 								
@@ -147,6 +154,9 @@ class CPUGraphTraversal : public GraphTraversal {
 
 							break;
 						}
+					case NO_OP_STEP: {
+						break;
+					}
 
 					default: {
 
@@ -156,6 +166,8 @@ class CPUGraphTraversal : public GraphTraversal {
 				}
 
 			}
+
+			return traversers;
 		}
 
 		/**
@@ -195,19 +207,29 @@ class CPUGraphTraversal : public GraphTraversal {
 					// Need to check if there is enough info to add the Edge, then add it
 					// if we can.
 					// from() and to() are both always required here.
-					CPUGraphTraversal* from_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[0])->get_out_traversal());
-					CPUGraphTraversal* to_traversal = new CPUGraphTraversal(this->getTraversalSource(), ((AddEdgeStep*)steps[0])->get_in_traversal());
+					GraphTraversalSource* my_traversal_source = this->getTraversalSource();
+					if(my_traversal_source == NULL) throw std::runtime_error("Cannot call this step from an anonymous traversal!\n");
+
+					CPUGraphTraversal* from_traversal = new CPUGraphTraversal(my_traversal_source, ((AddEdgeStep*)steps[0])->get_out_traversal());
+					CPUGraphTraversal* to_traversal = new CPUGraphTraversal(my_traversal_source, ((AddEdgeStep*)steps[0])->get_in_traversal());
 					std::string label = ((AddEdgeStep*)steps[0])->get_label();
 
 					BitVertex* from_vertex;
 					BitVertex* to_vertex;
+
+					// Add a dummy traverser so that execute() will actually do something.
+					traversers->push_back(new Traverser<void*>(NULL));
+
 					if(from_traversal == NULL) {
-						throw new std::runtime_error("No from step was provided.");
+						throw std::runtime_error("No from step was provided.");
 					} else { from_vertex = (BitVertex*)this->get_next(traversers, from_traversal); }
 
 					if(to_traversal == NULL) {
-						throw new std::runtime_error("No to step was provided.");
+						throw std::runtime_error("No to step was provided.");
 					} else { to_vertex = (BitVertex*)this->get_next(traversers, to_traversal); }
+
+					// Remove the dummy traverser
+					traversers->erase(traversers->begin());
 					
 					BitEdge* new_edge = (BitEdge*)((CPUGraph*)this->getGraph())->add_edge(from_vertex, to_vertex, label);
 					traversers->push_back(new Traverser<void*>((void*)new_edge));
@@ -243,11 +265,11 @@ class CPUGraphTraversal : public GraphTraversal {
 			temporary_traversers = traversal->execute(temporary_traversers);
 
 			// Make sure the traversal evaluated to something.
-			if(temporary_traversers->empty()) throw new std::runtime_error("Traversal evaluated to empty set!");
+			if(temporary_traversers->empty()) throw std::runtime_error("Traversal evaluated to empty set!");
 			
 			// Correct behavior is grabbing the first traverser and ignoring any others.
 			Traverser<void*>* out_traverser = temporary_traversers->at(0);
-			void* next_object = out_traverser->get();
+			void* next_object = *out_traverser->get();
 
 			// Ensure memory for the temporary traversers is cleared.
 			for_each(temporary_traversers->begin(), temporary_traversers->end(), [](Traverser<void*>* trv) { delete trv; });

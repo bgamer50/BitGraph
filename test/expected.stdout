@@ -1,0 +1,9 @@
+GraphTraversal {
+AddVertexStartStep()
+HasStep(a eq b)
+}
+3
+0 1 2
+---------
+# edges: 1
+0: 0->1
