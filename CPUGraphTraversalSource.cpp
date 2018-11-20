@@ -11,8 +11,8 @@ CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
 	// do nothing
 }
 
-GraphTraversal* CPUGraphTraversalSource::V() {
-	GraphTraversal* trv = new CPUGraphTraversal(this);
+GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::V() {
+	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
 	trv->appendStep(new GraphStep(VERTEX, {}));
 	return trv;
 }
@@ -21,24 +21,24 @@ GraphTraversal* CPUGraphTraversalSource::V() {
 	Although the API allows for making this a special call,
 	CPUGraph treats this as shorthand for g.V().outE()
 */
-GraphTraversal* CPUGraphTraversalSource::E() {
-	return this->V()->outE();
+GraphTraversal<Edge, Edge>* CPUGraphTraversalSource::E() {
+	return (GraphTraversal<Edge, Edge>*)this->V()->outE();
 }
 
-GraphTraversal* CPUGraphTraversalSource::addV() {
-	GraphTraversal* trv = new CPUGraphTraversal(this);
+GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::addV() {
+	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
 	trv->appendStep(new AddVertexStartStep());
 	return trv;
 }
 
-GraphTraversal* CPUGraphTraversalSource::addV(std::string label) {
-	GraphTraversal* trv = new CPUGraphTraversal(this);
+GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::addV(std::string label) {
+	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
 	trv->appendStep(new AddVertexStartStep(label));
 	return trv;
 }
 
-GraphTraversal* CPUGraphTraversalSource::addE(std::string label) {
-	GraphTraversal* trv = new CPUGraphTraversal(this);
+GraphTraversal<Edge, Edge>* CPUGraphTraversalSource::addE(std::string label) {
+	GraphTraversal<Edge, Edge>* trv = new CPUGraphTraversal<Edge, Edge>(this);
 	trv->appendStep(new AddEdgeStartStep(label));
 	return trv;
 }

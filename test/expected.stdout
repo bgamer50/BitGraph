@@ -2,6 +2,9 @@ GraphTraversal {
 AddVertexStartStep()
 HasStep(a eq b)
 }
+Added 3 vertices to the graph.
+Set property a to b on all vertices.
+Edge successfully added!
 3
 0 1 2
 ---------

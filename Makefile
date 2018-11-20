@@ -15,10 +15,13 @@ ifeq ($(shell uname -s), Linux)
 endif
 
 
-lib: CPUGraph.o CPUGraphTraversalSource.o BitVertex.o BitEdge.o
+lib: CPUGraphTraversal.o CPUGraph.o CPUGraphTraversalSource.o BitVertex.o BitEdge.o
 	$(CC) $(CFLAGS) -o $(LIBBITGRAPH_NAME) -lgremlin -shared CPUGraph.o CPUGraphTraversalSource.o BitVertex.o BitEdge.o
 	mv $(LIBBITGRAPH_NAME) $(LIBBITGRAPH_PATH)
 	chmod 755 $(LIBBITGRAPH_PATH)
+
+CPUGraphTraversal.o: CPUGraphTraversal.cpp CPUGraphTraversal.h
+	$(CC) $(CFLAGS) -o CPUGraphTraversal.o -c -I../gremlin++ CPUGraphTraversal.cpp
 
 CPUGraph.o: CPUGraph.cpp CPUGraph.h
 	$(CC) $(CFLAGS) -o CPUGraph.o -c -I../gremlin++ CPUGraph.cpp

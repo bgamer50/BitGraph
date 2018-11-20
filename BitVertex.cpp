@@ -1,5 +1,8 @@
+#include "Vertex.h"
 #include "BitVertex.h"
 #include <algorithm>
+#include <iostream>
+#include <stdio.h>
 
 BitVertex::BitVertex(uint64_t vid) {
 	this->vertex_id = vid;
@@ -17,7 +20,7 @@ BitVertex::BitVertex(uint64_t vid, std::string v_label) {
 /*
 	Get the unique id of the Vertex.
 	In CPUGraph this is indirectly
-	derived from its initial position 
+	derived from its initial position
 	in the list of Vertices.
 */
 void const* BitVertex::id() {
@@ -77,4 +80,45 @@ std::vector<BitEdge*> BitVertex::edges(Direction dir) {
 			// should never occur
 		}
 	}
+}
+
+/*
+	Get the property with the given key.
+*/
+VertexProperty<void*>* BitVertex::property(std::string key) {
+    std::cout << "32324324\n";
+	return this->my_properties.find(key)->second;
+}
+
+/*
+	Get the property with the given key.
+*/
+VertexProperty<void*>* BitVertex::property(Cardinality card, std::string key, void* value) {
+	auto old_prop = this->my_properties.find(key);
+	if(card == SINGLE) {
+		VertexProperty<void*>* prop = new VertexProperty<void*>(SINGLE, key, {value});
+		if(old_prop != this->my_properties.end()) delete old_prop->second;
+		this->my_properties[key] = prop;
+	}
+	else if(card == SET || card == LIST) {
+		if(old_prop != this->my_properties.end()) {
+			std::vector<void*> vals = old_prop->second->values();
+			vals.push_back(value);
+			delete old_prop->second;
+			this->my_properties[key] = new VertexProperty<void*>(card, key, vals);
+		}
+		else {
+			this->my_properties[key] = new VertexProperty<void*>(card, key, {value});
+		}
+	}
+	else {
+		throw std::runtime_error("Illegal cardinality!");
+	}
+
+	return this->my_properties[key];
+}
+
+
+VertexProperty<void*>* BitVertex::property(std::string key, void* value) {
+	return this->property(SINGLE, key, value);
 }
