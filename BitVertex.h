@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <set>
 #include <map>
+#include <boost/any.hpp>
 
 #include "Vertex.h"
 #include "Direction.h"
@@ -40,7 +41,7 @@ class BitVertex : public Vertex {
 		bool has_label;
 
 		// The properties
-		std::map<std::string, VertexProperty<void*>*> my_properties;
+		std::map<std::string, VertexProperty<boost::any>*> my_properties;
 
 		// Mutex that prevents concurrent edge addition
 		std::mutex add_edge_mutex;
@@ -57,9 +58,9 @@ class BitVertex : public Vertex {
 		void addEdge(BitEdge* new_edge, Direction dir);
 		std::vector<BitEdge*> edges(Direction dir);
 		
-		virtual VertexProperty<void*>* property(std::string key);
-		virtual VertexProperty<void*>* property(Cardinality cardinality, std::string key, void* value);
-		virtual VertexProperty<void*>* property(std::string key, void* value);
+		virtual VertexProperty<boost::any>* property(std::string key);
+		virtual VertexProperty<boost::any>* property(Cardinality cardinality, std::string key, boost::any value);
+		virtual VertexProperty<boost::any>* property(std::string key, boost::any value);
 };
 
 #endif

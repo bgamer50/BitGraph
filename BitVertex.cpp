@@ -1,5 +1,6 @@
 #include "Vertex.h"
 #include "BitVertex.h"
+#include "VertexProperty.h"
 #include <algorithm>
 #include <iostream>
 #include <stdio.h>
@@ -85,30 +86,26 @@ std::vector<BitEdge*> BitVertex::edges(Direction dir) {
 /*
 	Get the property with the given key.
 */
-VertexProperty<void*>* BitVertex::property(std::string key) {
-    std::cout << "32324324\n";
+VertexProperty<boost::any>* BitVertex::property(std::string key) {
 	return this->my_properties.find(key)->second;
 }
 
 /*
 	Get the property with the given key.
 */
-VertexProperty<void*>* BitVertex::property(Cardinality card, std::string key, void* value) {
+VertexProperty<boost::any>* BitVertex::property(Cardinality card, std::string key, boost::any value) {
 	auto old_prop = this->my_properties.find(key);
 	if(card == SINGLE) {
-		VertexProperty<void*>* prop = new VertexProperty<void*>(SINGLE, key, {value});
-		if(old_prop != this->my_properties.end()) delete old_prop->second;
-		this->my_properties[key] = prop;
+		this->my_properties[key] = new VertexProperty<boost::any>(SINGLE, key, {value});;
 	}
 	else if(card == SET || card == LIST) {
 		if(old_prop != this->my_properties.end()) {
-			std::vector<void*> vals = old_prop->second->values();
+			std::vector<boost::any> vals = old_prop->second->values();
 			vals.push_back(value);
-			delete old_prop->second;
-			this->my_properties[key] = new VertexProperty<void*>(card, key, vals);
+			this->my_properties[key] = new VertexProperty<boost::any>(card, key, vals);
 		}
 		else {
-			this->my_properties[key] = new VertexProperty<void*>(card, key, {value});
+			this->my_properties[key] = new VertexProperty<boost::any>(card, key, {value});
 		}
 	}
 	else {
@@ -119,6 +116,6 @@ VertexProperty<void*>* BitVertex::property(Cardinality card, std::string key, vo
 }
 
 
-VertexProperty<void*>* BitVertex::property(std::string key, void* value) {
+VertexProperty<boost::any>* BitVertex::property(std::string key, boost::any value) {
 	return this->property(SINGLE, key, value);
 }

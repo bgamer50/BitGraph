@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <exception>
 #include <iostream>
+#include <boost/any.hpp>
 
 #include "NoOpStep.h"
 #include "GraphTraversal.h"
@@ -90,6 +91,7 @@ class CPUGraphTraversal : public GraphTraversal<U, W> {
 				switch(this->steps[index]->uid) {
 					case GRAPH_STEP: // we implicitly assume this is a Vertex Graph step.
 						{
+							cout << "graph step\n";
 							// For each traverser, a traverser should be created for each Vertex and passed to the next step
 							std::vector<Vertex*> vertices = this->getGraph()->vertices();
 
@@ -121,6 +123,7 @@ class CPUGraphTraversal : public GraphTraversal<U, W> {
 						}
 					case ADD_VERTEX_STEP:
 						{
+							cout << "add vertex step\n";
 							// For each traverser, a new Vertex should be created and replace the original traverser
 							std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
 								Vertex* v = ((CPUGraph*)this->getGraph())->add_vertex();
@@ -130,6 +133,7 @@ class CPUGraphTraversal : public GraphTraversal<U, W> {
 						}
 					case ADD_EDGE_STEP:
 						{
+							std::cout << "add edge step\n";
 							// For each traverser
 							std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
 								// Need to check if there is enough info to add the Edge, then add it
@@ -188,15 +192,15 @@ class CPUGraphTraversal : public GraphTraversal<U, W> {
 					}
 
 					case HAS_STEP: {
-					    cout << "jfjfjfjfjf\n";
-                        auto has_step = (HasStep<void*>*)(this->steps[index]);
+					    cout << "has step\n";
+                        auto has_step = (HasStep*)(this->steps[index]);
                         cout << "cdcdcdcdcdc  " << traversers->size() << "\n";
                         std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
                             Vertex* v = (Vertex*)(*trv->get());
-                            cout << *((uint64_t*)v->id()) << "\n";
-                            cout << "8383838\n";
+                            cout << "vertex id " << *((uint64_t*)v->id()) << "\n";
+							cout << "applying has step...\n";
                             has_step->apply(v);
-                            cout << "etetetetet\n";
+                            cout << "application of has step was successful\n";
                         });
                         break;
 					}

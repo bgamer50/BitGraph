@@ -18,13 +18,14 @@ int main(int argc, char* argv[]) {
 		printf("%s\n", explanation.c_str());
 
 		Vertex* v_has_a_b = graph.traversal()->addV()->has("a", "b")->next();
+		printf("%d\n", v_has_a_b->id());
 
 		graph.traversal()->addV()->addV()->addV()->iterate();
 		printf("Added 3 vertices to the graph.\n");
 		graph.traversal()->V()->property("a", "b")->iterate();
 
 		auto p = graph.vertices()[0]->property("a");
-		printf("Set property %s to %s on all vertices.\n", p->key().c_str(), static_cast<std::string*>(p->value())->c_str());
+		printf("Set property %s to %s on all vertices.\n", p->key().c_str(), static_cast<std::string>(p->value())->c_str());
 		/*
 		graph.traversal()->addE()
 			->from(__->V()->hasId(1))
