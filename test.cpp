@@ -23,10 +23,10 @@ int main(int argc, char* argv[]) {
 		graph.traversal()->V()->property("a", std::string("b"))->iterate();
 
 		VertexProperty<boost::any>* p = graph.vertices()[0]->property("a");
-		cout << "Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value());
+		//cout << "Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value());
 
-		Vertex* v_has_a_b = graph.traversal()->addV()->has("a", "b")->next();
-		printf("%d\n", v_has_a_b->id());
+		Vertex* v_has_a_b = graph.traversal()->addV()->has("a", std::string("b"))->next();
+		printf("%d\n", *(int*)v_has_a_b->id());
 		/*
 		graph.traversal()->addE()
 			->from(__->V()->hasId(1))
