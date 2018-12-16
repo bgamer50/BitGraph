@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <string.h>
-#include "P.h"
 #include <string>
 #include <algorithm>
 #include <iostream>
 #include <functional>
+#include <boost/any.hpp>
+#include "P.h"
 #include "Vertex.h"
 #include "GraphTraversal.h"
 #include "CPUGraph.h"
@@ -17,15 +18,15 @@ int main(int argc, char* argv[]) {
 		auto explanation = graph.traversal()->addV()->has("a", "b")->explain();
 		printf("%s\n", explanation.c_str());
 
-		Vertex* v_has_a_b = graph.traversal()->addV()->has("a", "b")->next();
-		printf("%d\n", v_has_a_b->id());
-
 		graph.traversal()->addV()->addV()->addV()->iterate();
 		printf("Added 3 vertices to the graph.\n");
-		graph.traversal()->V()->property("a", "b")->iterate();
+		graph.traversal()->V()->property("a", std::string("b"))->iterate();
 
-		auto p = graph.vertices()[0]->property("a");
-		printf("Set property %s to %s on all vertices.\n", p->key().c_str(), static_cast<std::string>(p->value())->c_str());
+		VertexProperty<boost::any>* p = graph.vertices()[0]->property("a");
+		cout << "Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value());
+
+		Vertex* v_has_a_b = graph.traversal()->addV()->has("a", "b")->next();
+		printf("%d\n", v_has_a_b->id());
 		/*
 		graph.traversal()->addE()
 			->from(__->V()->hasId(1))

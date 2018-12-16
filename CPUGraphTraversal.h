@@ -183,9 +183,9 @@ class CPUGraphTraversal : public GraphTraversal<U, W> {
 
 					case ADD_PROPERTY_STEP: {
 
-						AddPropertyStep<void*>* add_property_step = (AddPropertyStep<void*>*)this->steps[index];
+						AddPropertyStep* add_property_step = dynamic_cast<AddPropertyStep*>(this->steps[index]);
 						std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
-							Vertex* v = (Vertex*)(*trv->get());
+							Vertex* v = static_cast<Vertex*>(*trv->get());
 							add_property_step->apply(v);
 						});
 						break;
@@ -195,13 +195,17 @@ class CPUGraphTraversal : public GraphTraversal<U, W> {
 					    cout << "has step\n";
                         auto has_step = (HasStep*)(this->steps[index]);
                         cout << "cdcdcdcdcdc  " << traversers->size() << "\n";
+                        auto new_traversers = new std::vector<Traverser<void*>*>;
                         std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser<void*>* trv) {
                             Vertex* v = (Vertex*)(*trv->get());
                             cout << "vertex id " << *((uint64_t*)v->id()) << "\n";
 							cout << "applying has step...\n";
-                            has_step->apply(v);
+                            bool advance = has_step->apply(v);
                             cout << "application of has step was successful\n";
+                            if(advance) new_traversers->push_back(trv); else delete trv;
                         });
+                        delete traversers;
+                        traversers = new_traversers;
                         break;
 					}
 

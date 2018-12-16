@@ -1,5 +1,5 @@
 CC := g++
-CFLAGS := --std=c++14 -fPIC
+CFLAGS := --std=c++14 -fPIC -g
 
 ifeq ($(shell uname -s), Darwin)
 	LIBBITGRAPH_PATH := /usr/local/lib/libbitgraph.dylib
