@@ -7,7 +7,7 @@ BitEdge::BitEdge(uint64_t id, Vertex* out, Vertex* in, std::string label) {
 	this->edge_label = label;
 }
 
-void const* BitEdge::id() { return &(this->edge_id); }
+boost::any BitEdge::id() { return boost::any(this->edge_id); }
 Vertex* BitEdge::outV() { return this->out_vertex; }
 Vertex* BitEdge::inV() { return this->in_vertex; }
-std::string const* BitEdge::label() { return &(this->edge_label); }
+std::string BitEdge::label() { return std::string(this->edge_label); }

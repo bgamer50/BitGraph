@@ -29,8 +29,8 @@ class BitEdge : public Edge {
 		/*
 			Get a pointer to the id of the given Edge.
 		*/
-		virtual void const* id();
-		virtual std::string const* label();
+		virtual boost::any id();
+		virtual std::string label();
 		virtual Vertex* outV();
 		virtual Vertex* inV();
 };

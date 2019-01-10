@@ -52,15 +52,15 @@ class BitVertex : public Vertex {
 	public:
 		BitVertex(uint64_t vid);
 		BitVertex(uint64_t vid, std::string v_label);
-		virtual void const* id();
-		virtual std::string const* label();
+		virtual boost::any id();
+		virtual std::string label();
 		virtual bool hasLabel();
 		void addEdge(BitEdge* new_edge, Direction dir);
 		std::vector<BitEdge*> edges(Direction dir);
 		
 		virtual VertexProperty<boost::any>* property(std::string key);
-		virtual VertexProperty<boost::any>* property(Cardinality cardinality, std::string key, boost::any value);
-		virtual VertexProperty<boost::any>* property(std::string key, boost::any value);
+		virtual VertexProperty<boost::any>* property(Cardinality cardinality, std::string key, boost::any& value);
+		virtual VertexProperty<boost::any>* property(std::string key, boost::any& value);
 };
 
 #endif

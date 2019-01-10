@@ -17,6 +17,12 @@ GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::V() {
 	return trv;
 }
 
+GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::V(Vertex* v) {
+	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
+	trv->appendStep(new GraphStep(VERTEX, {v->id()}));
+	return trv;
+}
+
 /*
 	Although the API allows for making this a special call,
 	CPUGraph treats this as shorthand for g.V().outE()

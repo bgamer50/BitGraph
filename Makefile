@@ -43,5 +43,8 @@ test: test.exe
 test.exe: test.cpp
 	$(CC) $(CFLAGS) -o test.exe -I../gremlin++ test.cpp -lgremlin -lbitgraph
 
+ingest.exe: ingest_simple.cpp
+	$(CC) $(CFLAGS) -o ingest.exe -I../gremlin++ ingest_simple.cpp -lgremlin -lbitgraph
+
 clean:
 	rm -rf *.o *.dylib *.lib *.so *.exe

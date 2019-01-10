@@ -36,5 +36,6 @@ Edge* CPUGraph::add_edge(BitVertex* from_vertex, BitVertex* to_vertex, std::stri
 	BitEdge* new_edge = new BitEdge(NEXT_EDGE_ID_CPU(), from_vertex, to_vertex, label);
 	from_vertex->addEdge(new_edge, OUT);
 	to_vertex->addEdge(new_edge, IN);
+	edge_list.push_back(new_edge);
 	return new_edge;
 }

@@ -24,16 +24,16 @@ BitVertex::BitVertex(uint64_t vid, std::string v_label) {
 	derived from its initial position
 	in the list of Vertices.
 */
-void const* BitVertex::id() {
-	return &vertex_id;
+boost::any BitVertex::id() {
+	return boost::any(vertex_id);
 }
 
 /*
 	Make sure to return NULL if there is
 	no label for the Vertex
 */
-std::string const* BitVertex::label() {
-	return has_label ? &vertex_label : NULL;
+std::string BitVertex::label() {
+	return has_label ? std::string(vertex_label) : NULL;
 }
 
 /*
@@ -93,7 +93,7 @@ VertexProperty<boost::any>* BitVertex::property(std::string key) {
 /*
 	Get the property with the given key.
 */
-VertexProperty<boost::any>* BitVertex::property(Cardinality card, std::string key, boost::any value) {
+VertexProperty<boost::any>* BitVertex::property(Cardinality card, std::string key, boost::any& value) {
 	auto old_prop = this->my_properties.find(key);
 	if(card == SINGLE) {
 		this->my_properties[key] = new VertexProperty<boost::any>(SINGLE, key, {value});;
@@ -116,6 +116,6 @@ VertexProperty<boost::any>* BitVertex::property(Cardinality card, std::string ke
 }
 
 
-VertexProperty<boost::any>* BitVertex::property(std::string key, boost::any value) {
+VertexProperty<boost::any>* BitVertex::property(std::string key, boost::any& value) {
 	return this->property(SINGLE, key, value);
 }

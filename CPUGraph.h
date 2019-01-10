@@ -53,7 +53,7 @@ class CPUGraph : public Graph {
 		GraphTraversalSource* traversal();
 }; 
 
-#define NEXT_VERTEX_ID_CPU() ( vertex_list.size() == 0 ? 0 : (*((uint64_t*)vertex_list.back()->id()) + 1) )
+#define NEXT_VERTEX_ID_CPU() ( vertex_list.size() == 0 ? 0 : (boost::any_cast<uint64_t>(vertex_list.back()->id()) + 1) )
 #define NEXT_EDGE_ID_CPU() ((uint64_t)( next_edge_id++ ))
 
 #endif
