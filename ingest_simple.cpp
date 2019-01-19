@@ -26,13 +26,13 @@ int main(int argc, char* argv[]) {
         Vertex* v1;
         Vertex* v2;
 
-        if(0 == names.count(std::string(id1))) v1 = g->addV(LABEL_V)->property(NAME, std::string(id1))->next();
-        else v1 = g->V()->has(NAME, std::string(id1))->next();
+        if(0 == names.count(std::string(id1))) v1 = boost::any_cast<Vertex*>(g->addV(LABEL_V)->property(NAME, std::string(id1))->next());
+        else v1 = boost::any_cast<Vertex*>(g->V()->has(NAME, std::string(id1))->next());
         names.insert(std::string(id1));
         std::cout << boost::any_cast<uint64_t>(v1->id()) << " " << boost::any_cast<std::string>(v1->property(NAME)->value()) << "\n";
         
-        if(0 == names.count(std::string(id2))) v2 = g->addV(LABEL_V)->property(NAME, std::string(id2))->next();
-        else v2 = g->V()->has(NAME, std::string(id2))->next();
+        if(0 == names.count(std::string(id2))) v2 = boost::any_cast<Vertex*>(g->addV(LABEL_V)->property(NAME, std::string(id2))->next());
+        else v2 = boost::any_cast<Vertex*>(g->V()->has(NAME, std::string(id2))->next());
         names.insert(std::string(id2));
         std::cout << boost::any_cast<uint64_t>(v2->id()) << " " << boost::any_cast<std::string>(v2->property(NAME)->value()) << "\n";
 
@@ -48,11 +48,23 @@ int main(int argc, char* argv[]) {
 
     fclose(f);
 
-    g->V()->in()->forEachRemaining([](void* v) {
-        Vertex* vtx = static_cast<Vertex*>(v);
+    g->V()->in()->forEachRemaining([](boost::any& v) {
+        Vertex* vtx = boost::any_cast<Vertex*>(v);
         std::cout << "id: " << boost::any_cast<std::string>(vtx->property(NAME)->value()) << "\n";
     });
 
     std::cout << "count: " << graph.edges().size() << "\n";
     for(Edge* e : graph.edges()) std::cout << boost::any_cast<std::string>(e->outV()->property(NAME)->value()) << " -> " << boost::any_cast<std::string>(e->inV()->property(NAME)->value()) << "\n";
+
+    try {
+        g->V()->property("cc", __->both()->id())->forEachRemaining([](boost::any& w) {
+            Vertex* v = boost::any_cast<Vertex*>(w);
+            boost::any a = v->property("cc")->value();
+            std::cout << a.type().name() << "\n";
+            std::cout << boost::any_cast<std::string>(v->property(NAME)->value()) << "/" << boost::any_cast<uint64_t>(v->id()) << ": " << boost::any_cast<uint64_t>(v->property("cc")->value()) << "\n";
+        });
+    } catch(const std::exception& err) {
+        std::cout << err.what() << "\n";
+        return -1;
+    }
 }

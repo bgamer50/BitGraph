@@ -7,12 +7,12 @@
 class CPUGraphTraversalSource : public GraphTraversalSource {
 	public:
 		CPUGraphTraversalSource(CPUGraph* gr);
-		GraphTraversal<Vertex, Vertex>* V();
-		GraphTraversal<Vertex, Vertex>* V(Vertex* v);
-		GraphTraversal<Edge, Edge>* E();
-		GraphTraversal<Vertex, Vertex>* addV();
-		GraphTraversal<Vertex, Vertex>* addV(std::string label);
-		GraphTraversal<Edge, Edge>* addE(std::string label);
+		GraphTraversal* V();
+		GraphTraversal* V(Vertex* v);
+		GraphTraversal* E();
+		GraphTraversal* addV();
+		GraphTraversal* addV(std::string label);
+		GraphTraversal* addE(std::string label);
 };
 
 #endif

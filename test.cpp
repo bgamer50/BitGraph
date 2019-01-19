@@ -33,8 +33,8 @@ int main(int argc, char* argv[]) {
 
 		std::cout << "size: " << graph.vertices().size() << "\n";
 
-		graph.traversal()->V()->has("a", std::string("b"))->forEachRemaining([](void* v){
-			Vertex* w = (Vertex*)v;
+		graph.traversal()->V()->has("a", std::string("b"))->forEachRemaining([](boost::any& v){
+			Vertex* w = boost::any_cast<Vertex*>(v);
 			std::cout << "The Vertex with id " << boost::any_cast<uint64_t>(w->id()) << " has property a = b\n";			
 		});
 

@@ -11,14 +11,14 @@ CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
 	// do nothing
 }
 
-GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::V() {
-	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
+GraphTraversal* CPUGraphTraversalSource::V() {
+	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new GraphStep(VERTEX, {}));
 	return trv;
 }
 
-GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::V(Vertex* v) {
-	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
+GraphTraversal* CPUGraphTraversalSource::V(Vertex* v) {
+	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new GraphStep(VERTEX, {v->id()}));
 	return trv;
 }
@@ -27,24 +27,24 @@ GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::V(Vertex* v) {
 	Although the API allows for making this a special call,
 	CPUGraph treats this as shorthand for g.V().outE()
 */
-GraphTraversal<Edge, Edge>* CPUGraphTraversalSource::E() {
-	return (GraphTraversal<Edge, Edge>*)this->V()->outE();
+GraphTraversal* CPUGraphTraversalSource::E() {
+	return (GraphTraversal*)this->V()->outE();
 }
 
-GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::addV() {
-	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
+GraphTraversal* CPUGraphTraversalSource::addV() {
+	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new AddVertexStartStep());
 	return trv;
 }
 
-GraphTraversal<Vertex, Vertex>* CPUGraphTraversalSource::addV(std::string label) {
-	GraphTraversal<Vertex, Vertex>* trv = new CPUGraphTraversal<Vertex, Vertex>(this);
+GraphTraversal* CPUGraphTraversalSource::addV(std::string label) {
+	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new AddVertexStartStep(label));
 	return trv;
 }
 
-GraphTraversal<Edge, Edge>* CPUGraphTraversalSource::addE(std::string label) {
-	GraphTraversal<Edge, Edge>* trv = new CPUGraphTraversal<Edge, Edge>(this);
+GraphTraversal* CPUGraphTraversalSource::addE(std::string label) {
+	GraphTraversal* trv = new CPUGraphTraversal(this);
 	trv->appendStep(new AddEdgeStartStep(label));
 	return trv;
 }
