@@ -3,6 +3,7 @@
 
 #include "Edge.h"
 #include <inttypes.h>
+#include <boost/any.hpp>
 
 class BitEdge : public Edge {
 	private:
@@ -24,15 +25,20 @@ class BitEdge : public Edge {
 			out vertices and the given label.  Per TP3
 			standard, all Edges must have a label.
 		*/
-		BitEdge(uint64_t id, Vertex* out, Vertex* in, std::string label);
+		BitEdge(uint64_t id, Vertex* out, Vertex* in, std::string label) {
+			this->edge_id = id;
+			this->out_vertex = out;
+			this->in_vertex = in;
+			this->edge_label = label;
+		}
 
 		/*
 			Get a pointer to the id of the given Edge.
 		*/
-		virtual boost::any id();
-		virtual std::string label();
-		virtual Vertex* outV();
-		virtual Vertex* inV();
+		virtual boost::any id() { return boost::any(this->edge_id); }
+		virtual std::string label() { return this->label; }
+		virtual Vertex* outV() { return this->out_vertex; }
+		virtual Vertex* inV() { return this->in_vertex; }
 };
 
 #endif

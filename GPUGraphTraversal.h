@@ -2,10 +2,10 @@
 #define GPU_GRAPH_TRAVERSAL_H
 
 #include <CL/sycl.hpp>
-#include "CPUGraphTraversal.h"
+//#include "CPUGraphTraversal.h"
 
-class GPUGraphTraversal : public CPUGraphTraversal {
+/*class GPUGraphTraversal : public CPUGraphTraversal {
 
-};
+};*/
 
 #endif
