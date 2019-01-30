@@ -13,12 +13,12 @@
 #include "AddEdgeStartStep.h"
 #include "AddEdgeStep.h"
 #include "AddPropertyStep.h"
-#include "ApplicableStep.h"
 #include "HasStep.h"
 #include "Traverser.h"
 #include "BitEdge.h"
 #include "BitVertex.h"
-#include "CPUGraph.h"
+#include "Graph.h"
+class CPUGraph;
 
 #ifndef CPU_GRAPH_TRAVERSAL_H
 #define CPU_GRAPH_TRAVERSAL_H
@@ -135,7 +135,7 @@ class CPUGraphTraversal : public GraphTraversal {
 							cout << "add vertex step\n";
 							// For each traverser, a new Vertex should be created and replace the original traverser
 							std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser* trv) {
-								Vertex* v = ((CPUGraph*)this->getGraph())->add_vertex();
+								Vertex* v = this->getGraph()->add_vertex();
 								trv->replace_data(v);
 							});
 							break;
@@ -178,7 +178,7 @@ class CPUGraphTraversal : public GraphTraversal {
 								std::cout << "from vertex: " << boost::any_cast<uint64_t>(from_vertex->id()) << "\n";
 								std::cout << "to vertex: " << boost::any_cast<uint64_t>(to_vertex->id()) << "\n";
 
-								CPUGraph* my_graph = static_cast<CPUGraph*>(this->getGraph());
+								Graph* my_graph = this->getGraph();
 								Edge* new_edge = my_graph->add_edge(static_cast<BitVertex*>(from_vertex), static_cast<BitVertex*>(to_vertex), label);
 								trv->replace_data(new_edge);
 
@@ -402,7 +402,7 @@ class CPUGraphTraversal : public GraphTraversal {
 					break;
 				}
 				case ADD_VERTEX_START_STEP: {
-					Vertex* v = ((CPUGraph*)this->getGraph())->add_vertex();
+					Vertex* v = this->getGraph()->add_vertex();
 					traversers->push_back(new Traverser(v));
 					break;
 				}
@@ -436,7 +436,8 @@ class CPUGraphTraversal : public GraphTraversal {
 					// Remove the dummy traverser
 					traversers->erase(traversers->begin());
 
-					BitEdge* new_edge = (BitEdge*)((CPUGraph*)this->getGraph())->add_edge(static_cast<BitVertex*>(from_vertex), static_cast<BitVertex*>(to_vertex), label);
+					Graph* graph = this->getGraph();
+					BitEdge* new_edge = (BitEdge*)graph->add_edge(static_cast<BitVertex*>(from_vertex), static_cast<BitVertex*>(to_vertex), label);
 					traversers->push_back(new Traverser(new_edge));
 					break;
 				}

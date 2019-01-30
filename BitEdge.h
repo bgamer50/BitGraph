@@ -36,7 +36,7 @@ class BitEdge : public Edge {
 			Get a pointer to the id of the given Edge.
 		*/
 		virtual boost::any id() { return boost::any(this->edge_id); }
-		virtual std::string label() { return this->label; }
+		virtual std::string label() { return this->edge_label; }
 		virtual Vertex* outV() { return this->out_vertex; }
 		virtual Vertex* inV() { return this->in_vertex; }
 };
