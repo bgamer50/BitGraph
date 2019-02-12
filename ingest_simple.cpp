@@ -3,6 +3,9 @@
 
 #include "CPUGraph.h"
 #include "GraphTraversal.h"
+#include "Q.h"
+#include "C.h"
+#include "GPUGraphTraversal.h"
 
 #define LABEL_V "basic_vertex"
 #define LABEL_E "basic_edge"
@@ -63,6 +66,22 @@ int main(int argc, char* argv[]) {
             std::cout << a.type().name() << "\n";
             std::cout << boost::any_cast<std::string>(v->property(NAME)->value()) << "/" << boost::any_cast<uint64_t>(v->id()) << ": " << boost::any_cast<uint64_t>(v->property("cc")->value()) << "\n";
         });
+    } catch(const std::exception& err) {
+        std::cout << err.what() << "\n";
+        return -1;
+    }
+
+    try {
+        GPUGraphTraversal* gpu_trv = dynamic_cast<GPUGraphTraversal*>(dynamic_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU()->V()->id());
+        gpu_trv->filter(Q<uint64_t>::eq((uint64_t)1, gpu_trv))->iterate();
+    } catch(const std::exception& err) {
+        std::cout << err.what() << "\n";
+        return -1;
+    }
+
+    try {
+        std::cout << "min id: " << boost::any_cast<uint64_t>(graph.traversal()->V()->id()->min(C<uint64_t>::compare())->next()) << "\n";
+        dynamic_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU()->V()->id()->min()->iterate();
     } catch(const std::exception& err) {
         std::cout << err.what() << "\n";
         return -1;

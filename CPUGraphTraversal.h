@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <exception>
 #include <iostream>
+#include <list>
 #include <boost/any.hpp>
 
 #include "NoOpStep.h"
@@ -13,11 +14,13 @@
 #include "AddEdgeStartStep.h"
 #include "AddEdgeStep.h"
 #include "AddPropertyStep.h"
+#include "PropertyStep.h"
 #include "HasStep.h"
 #include "Traverser.h"
 #include "BitEdge.h"
 #include "BitVertex.h"
 #include "Graph.h"
+#include "GPUFilterStep.h"
 class CPUGraph;
 
 #ifndef CPU_GRAPH_TRAVERSAL_H
@@ -61,12 +64,12 @@ class CPUGraphTraversal : public GraphTraversal {
 			Official API call.
 		**/
 		virtual boost::any next() {
-			std::vector<Traverser*>* traversers = this->get_initial_traversers();
+			std::list<Traverser*>* traversers = this->get_initial_traversers();
 			traversers = this->execute(traversers);
 
 			if(traversers->empty()) throw std::runtime_error("No Traversers were available!");
 
-			Traverser* trv = traversers->at(0);
+			Traverser* trv = traversers->front();
 			boost::any data = trv->get();
 			free(traversers);
 
@@ -78,7 +81,7 @@ class CPUGraphTraversal : public GraphTraversal {
 			each of the traversal results.
 		**/
 		virtual void forEachRemaining(std::function<void(boost::any&)> func) {
-			std::vector<Traverser*>* traversers = this->get_initial_traversers();
+			std::list<Traverser*>* traversers = this->get_initial_traversers();
 			traversers = this->execute(traversers);
 
 			if(traversers->empty()) throw std::runtime_error("No Traversers were available!");
@@ -95,7 +98,7 @@ class CPUGraphTraversal : public GraphTraversal {
 			Given some initial traversers, execute this CPUGraphTraversal.  This method does most
 			of the real work once there is data to operate on.
 		**/
-		virtual std::vector<Traverser*>* execute(std::vector<Traverser*>* traversers) {
+		virtual std::list<Traverser*>* execute(std::list<Traverser*>* traversers) {
 			for(auto index = 0; index < this->steps.size(); index++) {
 				switch(this->steps[index]->uid) {
 					case GRAPH_STEP: // we implicitly assume this is a Vertex Graph step.
@@ -113,7 +116,7 @@ class CPUGraphTraversal : public GraphTraversal {
 								else element_id_counts[id] = 1;
 							});
 
-							std::vector<Traverser*>* new_traversers = new std::vector<Traverser*>;
+							std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
 							// For each traverser...
 							std::for_each(traversers->begin(), traversers->end(), [&](Traverser* trv) {
 								std::for_each(vertices.begin(), vertices.end(), [&](Vertex* v) {
@@ -204,10 +207,10 @@ class CPUGraphTraversal : public GraphTraversal {
 								CPUGraphTraversal* new_trv = new CPUGraphTraversal(this->getTraversalSource(), traversal);
 								
 								// Execute traversal
-								std::vector<Traverser*>* temp_traversers = new std::vector<Traverser*>;
+								std::list<Traverser*>* temp_traversers = new std::list<Traverser*>;
 								temp_traversers->push_back(new Traverser(trv->get()));
 								boost::any prop_value = this->get_next(temp_traversers, new_trv);
-								delete temp_traversers->at(0);
+								delete temp_traversers->front();
 								delete temp_traversers;
 
 								// Store the property
@@ -227,22 +230,26 @@ class CPUGraphTraversal : public GraphTraversal {
 					}
 
 					case HAS_STEP: {
-					    cout << "has step\n";
+						cout << "has step\n";
                         HasStep* has_step = dynamic_cast<HasStep*>(this->steps[index]);
-                        
-                        std::vector<Traverser*>* new_traversers = new std::vector<Traverser*>;
-                        std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser* trv) {
-							Vertex* v = boost::any_cast<Vertex*>(trv->get());
-                            //cout << "vertex id " << boost::any_cast<uint64_t>(v->id()) << "\n";
-							//cout << "applying has step...\n";
-							//std::cout << "Vertex " << boost::any_cast<uint64_t>(v->id()) << " has a=" << boost::any_cast<std::string>(v->property("a")->value()) << "\n";
-                            bool advance = has_step->apply(v);
-                            //cout << "application of has step was successful\n";
-                            if(advance) new_traversers->push_back(trv); else delete trv;
-                        });
-                        delete traversers;
+						std::list<Traverser*>* new_traversers = this->execute_has_step(has_step, traversers);
+
+						delete traversers;
                         traversers = new_traversers;
-                        break;
+                        break;                        
+					}
+
+					case GPU_FILTER_STEP: {
+						cout << "gpu filter step\n";
+						GPUFilterStep* gpu_filter_step = dynamic_cast<GPUFilterStep*>(this->steps[index]);
+						gpu_filter_step->apply(traversers);
+						break;
+					}
+
+					case MIN_STEP: {
+						std::cout << "min step\n";
+						this->execute_min_step(traversers, dynamic_cast<MinStep*>(this->steps[index]));
+						break;
 					}
 
 					case ID_STEP: {
@@ -272,7 +279,7 @@ class CPUGraphTraversal : public GraphTraversal {
 						bool label_required = !labels.empty();
 						Direction direction = vertex_step->get_direction();
 
-						std::vector<Traverser*>* new_traversers = new std::vector<Traverser*>;
+						std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
 						std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser* trv) {
 							BitVertex* v = static_cast<BitVertex*>(boost::any_cast<Vertex*>(trv->get()));
 							for(BitEdge* e : v->edges(direction)) {
@@ -306,6 +313,30 @@ class CPUGraphTraversal : public GraphTraversal {
 						break;
 					}
 
+					case PROPERTY_STEP: {
+						PropertyStep* property_step = dynamic_cast<PropertyStep*>(this->steps[index]);
+						std::vector<std::string>& keys = property_step->get_keys();
+
+						std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
+
+						for(auto it = traversers->begin(); it != traversers->end(); ++it) {
+							for(std::string key : keys) {
+								try {
+									Vertex* v = boost::any_cast<Vertex*>((*it)->get());
+									VertexProperty<boost::any>* p = v->property(key);
+									if(p != nullptr) new_traversers->push_back(new Traverser(p));
+								} catch(const std::exception& err) {
+									throw std::runtime_error("Error: Traverser does not appear to contain a Vertex.");
+								}
+							}
+						}
+
+						delete traversers;
+						traversers = new_traversers;
+
+						break;
+					}
+
 					default: {
 
 						// TODO throw exception
@@ -317,6 +348,37 @@ class CPUGraphTraversal : public GraphTraversal {
 
 			return traversers;
 		}
+
+		/*
+			Executes the min step.  May be overridden by subclasses (i.e. GPUGraphTraversal)
+		*/
+		virtual void execute_min_step(std::list<Traverser*>* traversers, MinStep* min_step) {
+			Traverser* min = traversers->front();
+			for(auto it = traversers->begin(); it != traversers->end(); ++it) {
+				min = min_step->min(*it, min);
+			}
+
+			traversers->clear();
+			traversers->push_back(min);
+		}
+
+		/*
+			Executes the has step.  May be overridden by subclasses (i.e. GPUGraphTraversal)
+		*/
+		virtual std::list<Traverser*>* execute_has_step(HasStep* has_step, std::list<Traverser*>* traversers) {
+			std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
+			std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser* trv) {
+				Vertex* v = boost::any_cast<Vertex*>(trv->get());
+				//cout << "vertex id " << boost::any_cast<uint64_t>(v->id()) << "\n";
+				//cout << "applying has step...\n";
+				//std::cout << "Vertex " << boost::any_cast<uint64_t>(v->id()) << " has a=" << boost::any_cast<std::string>(v->property("a")->value()) << "\n";
+				bool advance = has_step->apply(v);
+				//cout << "application of has step was successful\n";
+				if(advance) new_traversers->push_back(trv); else delete trv;
+			});
+
+			return new_traversers;
+        }
 
 		/**
 			Performs each step of the traversal.
@@ -330,8 +392,8 @@ class CPUGraphTraversal : public GraphTraversal {
 			Create a copy of this traversal's traversers.  Used when some anonymous traversal needs to be passed the
 			existing traversers; obviously we to maintain the current traverser status.
 		*/
-		inline std::vector<Traverser*>* copy_traversers(std::vector<Traverser*>* old_traversers) {
-			std::vector<Traverser*>* new_traversers = new std::vector<Traverser*>;
+		inline std::list<Traverser*>* copy_traversers(std::list<Traverser*>* old_traversers) {
+			std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
 			std::for_each(old_traversers->begin(), old_traversers->end(), [&new_traversers](Traverser* trv){
 				new_traversers->push_back(new Traverser(trv->get()));
 			});
@@ -342,16 +404,16 @@ class CPUGraphTraversal : public GraphTraversal {
 		/*
 			Get the next object from the given traversal.  Makes a copy of the given traversers.
 		*/
-		inline boost::any get_next(std::vector<Traverser*>* traversers, CPUGraphTraversal* traversal) {
+		inline boost::any get_next(std::list<Traverser*>* traversers, CPUGraphTraversal* traversal) {
 			// Call execute in the given traversal with a copy of the current traversers.
-			std::vector<Traverser*>* temporary_traversers = this->copy_traversers(traversers);
+			std::list<Traverser*>* temporary_traversers = this->copy_traversers(traversers);
 			temporary_traversers = traversal->execute(temporary_traversers);
 
 			// Make sure the traversal evaluated to something.
 			if(temporary_traversers->empty()) throw std::runtime_error("Traversal evaluated to empty set!");
 
 			// Correct behavior is grabbing the first traverser and ignoring any others.
-			Traverser* out_traverser = temporary_traversers->at(0);
+			Traverser* out_traverser = temporary_traversers->front();
 			boost::any next_object = out_traverser->get();
 
 			// Ensure memory for the temporary traversers is cleared.
@@ -362,7 +424,7 @@ class CPUGraphTraversal : public GraphTraversal {
 		}
 
     private:
-        std::vector<Traverser*>* get_initial_traversers() {
+        std::list<Traverser*>* get_initial_traversers() {
             // Get the initial optimized traversal.
 			this->getInitialTraversal();
 
@@ -371,7 +433,7 @@ class CPUGraphTraversal : public GraphTraversal {
 				return nullptr;
 			}
 
-			std::vector<Traverser*>* traversers = new std::vector<Traverser*>; // Will use these to traverse
+			std::list<Traverser*>* traversers = new std::list<Traverser*>; // Will use these to traverse
 
 			// Handle the start step (GraphStep(Vertex), GraphStep(Edge), or AddEdgeStartStep)
 			switch(this->steps[0]->uid) {

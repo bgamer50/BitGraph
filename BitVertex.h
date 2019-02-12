@@ -132,7 +132,9 @@ class BitVertex : public Vertex {
 			Get the property with the given key.
 		*/		
 		virtual VertexProperty<boost::any>* property(std::string key) {
-			return this->my_properties.find(key)->second;
+			auto v = this->my_properties.find(key);
+			if(v == my_properties.end()) return nullptr;
+			return v->second;
 		}
 
 		/*
