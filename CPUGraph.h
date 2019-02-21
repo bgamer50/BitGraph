@@ -1,15 +1,22 @@
 #ifndef CPU_GRAPH_H
 #define CPU_GRAPH_H
 
+#include "Index.h"
 #include "Graph.h"
+#include "Element.h"
 #include <string>
 #include <vector>
+#include <map>
 class BitVertex;
+
+enum IndexType {VERTEX_INDEX, EDGE_INDEX};
 
 class CPUGraph : public Graph {
 	private:
 		std::vector<Vertex*> vertex_list;
 		std::vector<Edge*> edge_list;
+		std::map<std::string, Index*> vertex_index;
+		std::unordered_map<uint64_t, Vertex*> vertex_id_map;
 		uint64_t next_edge_id = 0;
 	public:
 
@@ -39,6 +46,8 @@ class CPUGraph : public Graph {
 		*/
 		virtual Vertex* add_vertex();
 
+		Vertex* get_vertex(boost::any& id);
+
 		/*
 			Adds a new Edge to this CPUGraph.
 		*/
@@ -48,6 +57,20 @@ class CPUGraph : public Graph {
 			Get a traversal source for this CPUGraph.
 		*/
 		virtual GraphTraversalSource* traversal();
+
+		bool is_indexed(std::string key) {
+			return vertex_index.count(key) > 0;
+		}
+
+		void clear_index(BitVertex* v, std::string property_key, boost::any value);
+
+		void update_index(BitVertex* v, std::string property_key, boost::any value);
+		
+		void create_index(IndexType type, std::string property_key, std::function<int64_t(boost::any&)> hash_func, std::function<bool(boost::any&, boost::any&)> equals_func);
+
+		Index* get_index(std::string key) {
+			return vertex_index.find(key)->second;
+		}
 };
 
 #define NEXT_VERTEX_ID_CPU() ( vertex_list.size() == 0 ? 0 : (boost::any_cast<uint64_t>(vertex_list.back()->id()) + 1) )
@@ -71,6 +94,7 @@ GraphTraversalSource* CPUGraph::traversal() {
 Vertex* CPUGraph::add_vertex(std::string label) {
 	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU(), label);
 	vertex_list.push_back(v);
+	vertex_map.insert(std::pair{v->id, v});
 	return v;
 }
 
@@ -80,7 +104,13 @@ Vertex* CPUGraph::add_vertex(std::string label) {
 Vertex* CPUGraph::add_vertex() {
 	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU());
 	vertex_list.push_back(v);
+	vertex_map.insert(std::pair{v->id, v});
 	return v;
+}
+
+Vertex* CPUGraph::get_vertex(boost::any& id) {
+	uint64_t id_val = boost::any_cast<uint64_t>(id);
+	return vertex_id_map.find(id_val).second;
 }
 
 /*
@@ -95,6 +125,24 @@ Edge* CPUGraph::add_edge(Vertex* out, Vertex* in, std::string label) {
 	to_vertex->addEdge(new_edge, IN);
 	edge_list.push_back(new_edge);
 	return new_edge;
+}
+
+void CPUGraph::clear_index(BitVertex* v, std::string property_key, boost::any value) {
+	auto f = vertex_index.find(property_key);
+	if(f == vertex_index.end()) throw std::runtime_error("Property not indexed!\n");
+	
+	f->second->remove(v, value);
+}
+
+void CPUGraph::update_index(BitVertex* v, std::string property_key, boost::any value) {
+	auto f = vertex_index.find(property_key);
+	if(f == vertex_index.end()) throw std::runtime_error("Property not indexed!\n");
+	f->second->insert(v, value);
+}
+
+void CPUGraph::create_index(IndexType type, std::string property_key, std::function<int64_t(boost::any&)> hash_func, std::function<bool(boost::any&, boost::any&)> equals_func) {
+	Index* idx = new Index(hash_func, equals_func);
+	vertex_index.insert(std::pair<std::string, Index*>(property_key, idx));
 }
 
 #endif

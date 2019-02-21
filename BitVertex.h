@@ -143,9 +143,9 @@ class BitVertex : public Vertex {
 		virtual VertexProperty<boost::any>* property(Cardinality card, std::string key, boost::any& value) {
 			auto old_prop = this->my_properties.find(key);
 			if(card == SINGLE) {
-				this->my_properties[key] = new VertexProperty<boost::any>(SINGLE, key, {value});;
+				this->my_properties[key] = new VertexProperty<boost::any>(SINGLE, key, {value});
 			}
-			else if(card == SET || card == LIST) {
+			else if(card == SET || card == LIST) { //TODO this is incorrect
 				if(old_prop != this->my_properties.end()) {
 					std::vector<boost::any> vals = old_prop->second->values();
 					vals.push_back(value);

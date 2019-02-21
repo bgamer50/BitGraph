@@ -81,9 +81,21 @@ int main(int argc, char* argv[]) {
 
     try {
         std::cout << "min id: " << boost::any_cast<uint64_t>(graph.traversal()->V()->id()->min(C<uint64_t>::compare())->next()) << "\n";
-        dynamic_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU()->V()->id()->min()->iterate();
+        dynamic_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU()->V()->id()->min(C<uint64_t>::compare())->iterate();
     } catch(const std::exception& err) {
         std::cout << err.what() << "\n";
+        return -1;
+    }
+
+    try {
+        std::cout << "coalesce:" << std::endl;
+        graph.traversal()->V()->coalesce({__->id(), __->id()})->forEachRemaining([](boost::any& i) {
+            uint64_t id = boost::any_cast<uint64_t>(i);
+            std::cout << id << std::endl;
+        });
+        std::cout << std::endl;
+    } catch(const std::exception& err) {
+        std::cout << err.what() << std::endl;
         return -1;
     }
 }

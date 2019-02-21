@@ -31,5 +31,11 @@ ingest.exe: ingest.o
 ingest.o: ingest_simple.cpp
 	$(CC) $(CFLAGS) ingest_simple.cpp -c -o ingest.o -I../gremlin++ -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
 
+components.exe: components.o
+	$(CC) $(CFLAGS) components.o -o components.exe -I../gremlin++ -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
+
+components.o: components.cpp
+	$(CC) $(CFLAGS) components.cpp -c -o components.o -I../gremlin++ -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
+
 clean:
 	rm -rf *.o *.dylib *.lib *.so *.exe

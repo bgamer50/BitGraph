@@ -10,8 +10,6 @@
 
 #define GPU_FILTER_STEP 0x11
 
-class GPUGraphTraversal;
-
 class GPUFilterStep : public TraversalStep {
     private:
         std::function<std::vector<bool>(std::list<Traverser*>*)> q_function;
@@ -27,8 +25,6 @@ class GPUFilterStep : public TraversalStep {
             }
         }
 };
-
-#include "GPUGraphTraversal.h"
 
 GPUFilterStep::GPUFilterStep(std::function<std::vector<bool>(std::list<Traverser*>*)> q)
         : TraversalStep(FILTER, GPU_FILTER_STEP) {

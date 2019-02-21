@@ -3,7 +3,6 @@
 
 #include "GraphTraversalSource.h"
 #include "CPUGraphTraversal.h"
-#include "GPUGraphTraversal.h"
 #include "GraphStep.h"
 #include "AddVertexStartStep.h"
 #include "AddEdgeStartStep.h"
@@ -12,6 +11,7 @@ class CPUGraph;
 class CPUGraphTraversalSource : public GraphTraversalSource {
 	private:
 		bool with_gpu;
+		GraphTraversal* get_appropriate_traversal();
 
 	public:
 		CPUGraphTraversalSource(CPUGraph* gr)
@@ -25,13 +25,13 @@ class CPUGraphTraversalSource : public GraphTraversalSource {
 		}
 
 		GraphTraversal* V() {
-			GraphTraversal* trv = this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+			GraphTraversal* trv = get_appropriate_traversal();
 			trv->appendStep(new GraphStep(VERTEX, {}));
 			return trv;
 		}
 
 		GraphTraversal* V(Vertex* v) {
-			GraphTraversal* trv = this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+			GraphTraversal* trv = get_appropriate_traversal();
 			trv->appendStep(new GraphStep(VERTEX, {v->id()}));
 			return trv;
 		}
@@ -45,22 +45,27 @@ class CPUGraphTraversalSource : public GraphTraversalSource {
 		}
 		
 		GraphTraversal* addV() {
-			GraphTraversal* trv = this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+			GraphTraversal* trv = get_appropriate_traversal();
 			trv->appendStep(new AddVertexStartStep());
 			return trv;
 		}
 		
 		GraphTraversal* addV(std::string label) {
-			GraphTraversal* trv = this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+			GraphTraversal* trv = get_appropriate_traversal();
 			trv->appendStep(new AddVertexStartStep(label));
 			return trv;
 		}
 
 		GraphTraversal* addE(std::string label) {
-			GraphTraversal* trv = this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+			GraphTraversal* trv = get_appropriate_traversal();
 			trv->appendStep(new AddEdgeStartStep(label));
 			return trv;
 		}
 };
+
+#include "GPUGraphTraversal.h"
+GraphTraversal* CPUGraphTraversalSource::get_appropriate_traversal() {
+	return this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+}
 
 #endif
