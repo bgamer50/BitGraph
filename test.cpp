@@ -22,14 +22,19 @@ int main(int argc, char* argv[]) {
 		printf("Added 3 vertices to the graph.\n");
 		graph.traversal()->V()->property("a", std::string("b"))->iterate();
 
-		VertexProperty<boost::any>* p = graph.vertices()[0]->property("a");
-		std::cout << boost::any_cast<uint64_t>(graph.vertices()[0]->id()) << " Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value()) << "\n";
-		
-		p = graph.vertices()[1]->property("a");
-		std::cout << boost::any_cast<uint64_t>(graph.vertices()[1]->id()) << " Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value()) << "\n";
+		std::vector<Vertex*> vertices;
+		std::for_each(graph.vertices().begin(), graph.vertices().end(), [&vertices](Vertex* v) {
+			vertices.push_back(v);
+		});
 
-		p = graph.vertices()[2]->property("a");
-		std::cout << boost::any_cast<uint64_t>(graph.vertices()[2]->id()) << " Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value()) << "\n";
+		VertexProperty<boost::any>* p = vertices.front()->property("a");
+		std::cout << boost::any_cast<uint64_t>(vertices.front()->id()) << " Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value()) << "\n";
+		
+		p = vertices[1]->property("a");
+		std::cout << boost::any_cast<uint64_t>(vertices[1]->id()) << " Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value()) << "\n";
+
+		p = vertices[2]->property("a");
+		std::cout << boost::any_cast<uint64_t>(vertices[2]->id()) << " Set property " << p->key() << " to " << boost::any_cast<std::string>(p->value()) << "\n";
 
 		std::cout << "size: " << graph.vertices().size() << "\n";
 
@@ -47,15 +52,14 @@ int main(int argc, char* argv[]) {
 			->to(__->V()->hasId(1))
 			->iterate();
 		*/
-		graph.traversal()->addE("basic_edge")->from(graph.vertices()[0])->to(graph.vertices()[1])->iterate();
+		graph.traversal()->addE("basic_edge")->from(vertices[0])->to(vertices[1])->iterate();
 		cout << "Edge successfully added!\n";
 
-		std::vector<Vertex*> vertices = graph.vertices();
-		std::cout << vertices.size() << "\n";
+		std::cout << graph.vertices().size() << "\n";
 		for_each(vertices.begin(), vertices.end(), [](Vertex* v){ std::cout << boost::any_cast<uint64_t>(v->id()) << " "; });
 		std::cout << "\n---------\n";
 
-		std::vector<BitEdge*> edges = ((BitVertex*)graph.vertices()[0])->edges(OUT);
+		std::vector<BitEdge*> edges = ((BitVertex*)graph.vertices().front())->edges(OUT);
 		cout << "# edges: " << edges.size() << "\n";
 		for_each(edges.begin(), edges.end(), [](BitEdge* edg) { 
 			uint64_t edge_id = boost::any_cast<uint64_t>(edg->id());

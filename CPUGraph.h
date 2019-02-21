@@ -4,17 +4,19 @@
 #include "Index.h"
 #include "Graph.h"
 #include "Element.h"
+#include "Direction.h"
 #include <string>
 #include <vector>
-#include <map>
+#include <list>
+#include <unordered_map>
 class BitVertex;
 
 enum IndexType {VERTEX_INDEX, EDGE_INDEX};
 
 class CPUGraph : public Graph {
 	private:
-		std::vector<Vertex*> vertex_list;
-		std::vector<Edge*> edge_list;
+		std::list<Vertex*> vertex_list;
+		std::list<Edge*> edge_list;
 		std::map<std::string, Index*> vertex_index;
 		std::unordered_map<uint64_t, Vertex*> vertex_id_map;
 		uint64_t next_edge_id = 0;
@@ -26,15 +28,14 @@ class CPUGraph : public Graph {
 		CPUGraph(): Graph() {}
 
 		/*
-			The vector? containing the CPUGraph's vertices.
-			May want to change this in the future.
+			The list containing the CPUGraph's vertices.
 		*/
-		std::vector<Vertex*> vertices() { return vertex_list; }
+		std::list<Vertex*>& vertices() { return vertex_list; }
 
 		/*
-			The vector? containing the CPUGraph's edges.
+			The list containing the CPUGraph's edges.
 		*/
-		std::vector<Edge*> edges() { return edge_list; }
+		std::list<Edge*>& edges() { return edge_list; }
 
 		/*
 			Adds a new Vertex (w/label) to this CPUGraph.
@@ -93,8 +94,9 @@ GraphTraversalSource* CPUGraph::traversal() {
 */
 Vertex* CPUGraph::add_vertex(std::string label) {
 	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU(), label);
+	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
 	vertex_list.push_back(v);
-	vertex_map.insert(std::pair{v->id, v});
+	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
 
@@ -103,14 +105,15 @@ Vertex* CPUGraph::add_vertex(std::string label) {
 */
 Vertex* CPUGraph::add_vertex() {
 	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU());
+	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
 	vertex_list.push_back(v);
-	vertex_map.insert(std::pair{v->id, v});
+	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
 
 Vertex* CPUGraph::get_vertex(boost::any& id) {
 	uint64_t id_val = boost::any_cast<uint64_t>(id);
-	return vertex_id_map.find(id_val).second;
+	return vertex_id_map.find(id_val)->second;
 }
 
 /*

@@ -64,8 +64,8 @@ int main(int argc, char* argv[]) {
 
     std::chrono::duration<double> elapsed = end-start;
     std::cout << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
-    /*
-    std::vector<Vertex*> vertices = graph.vertices();
+    
+    /*std::list<Vertex*> vertices = graph.vertices();
     for(auto it = vertices.begin(); it != vertices.end(); ++it) {
         std::string name = boost::any_cast<std::string>((*it)->property(NAME)->value());
         uint64_t id = boost::any_cast<uint64_t>((*it)->id());
@@ -82,8 +82,8 @@ int main(int argc, char* argv[]) {
     } catch(const std::exception& err) {
         std::cout << err.what() << std::endl;
         return -1;
-    }
-    */
+    }*/
+    
 
     fclose(f);
 }

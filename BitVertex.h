@@ -29,10 +29,10 @@ class BitVertex : public Vertex {
 		uint64_t vertex_id;
 		
 		// The outgoing edges
-		std::vector<BitEdge*> edges_out;
+		std::list<BitEdge*> edges_out;
 
 		// The incoming edges
-		std::vector<BitEdge*> edges_in;
+		std::list<BitEdge*> edges_in;
 
 		// The label, if it has one
 		std::string vertex_label;
@@ -44,10 +44,10 @@ class BitVertex : public Vertex {
 		std::map<std::string, VertexProperty<boost::any>*> my_properties;
 
 		// Mutex that prevents concurrent edge addition
-		std::mutex add_edge_mutex;
+		//std::mutex add_edge_mutex;
 
 		// Mutex that prevents concurrent property addition
-		std::mutex add_prop_mutex;
+		//std::mutex add_prop_mutex;
 
 	public:
 		BitVertex(uint64_t vid) {
@@ -95,12 +95,12 @@ class BitVertex : public Vertex {
 			sure the Edge makes sense.
 		*/
 		void addEdge(BitEdge* new_edge, Direction dir) {
-			add_edge_mutex.lock();
+			//add_edge_mutex.lock();
 
 			if(dir == OUT && new_edge->outV() == this) edges_out.push_back(new_edge);
 			else if(dir == IN && new_edge->inV() == this) edges_in.push_back(new_edge);
 
-			add_edge_mutex.unlock();
+			//add_edge_mutex.unlock();
 		}
 
 		/*
@@ -109,10 +109,10 @@ class BitVertex : public Vertex {
 		std::vector<BitEdge*> edges(Direction dir) {
 			switch(dir) {
 				case OUT: {
-					return this->edges_out;
+					return std::vector<BitEdge*>{std::begin(this->edges_out), std::end(this->edges_out)};
 				}
 				case IN: {
-					return this->edges_in;
+					return std::vector<BitEdge*>{std::begin(this->edges_in), std::end(this->edges_in)};
 				}
 				case BOTH: {
 					std::vector<BitEdge*> both_edges;

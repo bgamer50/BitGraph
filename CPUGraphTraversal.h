@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include <boost/any.hpp>
 
+#include "Direction.h"
 #include "NoOpStep.h"
 #include "GraphTraversal.h"
 #include "VertexStep.h"
@@ -95,30 +96,8 @@ class CPUGraphTraversal : public GraphTraversal {
 							#ifdef VERBOSE
 							cout << "graph step\n";
 							#endif
-							// For each traverser, a traverser should be created for each Vertex and passed to the next step
-							std::vector<Vertex*> vertices = this->getGraph()->vertices();
-
-							// Make map of element ids to counts
-							std::vector<boost::any> element_ids = ((GraphStep*)this->steps[index])->get_element_ids();
-							std::map<uint64_t, unsigned long> element_id_counts;
-							std::for_each(element_ids.begin(), element_ids.end(), [&](boost::any id_ctr){
-								uint64_t id = boost::any_cast<uint64_t>(id_ctr);
-								if(element_id_counts.find(id) != element_id_counts.end()) element_id_counts[id]++;
-								else element_id_counts[id] = 1;
-							});
-
-							std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
-							// For each traverser...
-							std::for_each(traversers->begin(), traversers->end(), [&](Traverser* trv) {
-								std::for_each(vertices.begin(), vertices.end(), [&](Vertex* v) {
-									// TODO this is still inefficient; there is probably a better way to get vertices.
-									uint64_t id = boost::any_cast<uint64_t>(v->id());
-									if(element_id_counts.find(id) != element_id_counts.end()) {
-										for(auto k = 0; k < element_id_counts[id]; k++) new_traversers->push_back(new Traverser(v));
-										// TODO retain side effect information
-									}
-								});
-							});
+							GraphStep* graph_step = dynamic_cast<GraphStep*>(this->steps[index]);
+							std::list<Traverser*>* new_traversers = execute_graph_step(graph_step, traversers);
 
 							delete traversers;
 							traversers = new_traversers;
@@ -385,7 +364,7 @@ class CPUGraphTraversal : public GraphTraversal {
 		/*
 			Executes the add property step.
 		*/
-		execute_add_property_step(AddPropertyStep* add_property_step, std::list<Traverser*>* traversers);
+		void execute_add_property_step(AddPropertyStep* add_property_step, std::list<Traverser*>* traversers);
 
 		/*
 			Executes the has step.  May be overridden by subclasses (i.e. GPUGraphTraversal)
@@ -396,6 +375,16 @@ class CPUGraphTraversal : public GraphTraversal {
 			Executes the index step.
 		*/
 		std::list<Traverser*>* execute_index_step(IndexStep* index_step, std::list<Traverser*>* traversers);
+
+		/*
+			Executes the graph step.
+		*/
+		std::list<Traverser*>* execute_graph_step(GraphStep* graph_step, std::list<Traverser*>* traversers);
+
+		/*
+			Executes the graph step (start).
+		*/
+		void execute_graph_step_start(GraphStep* graph_step, std::list<Traverser*>* traversers);
 
 		/**
 			Performs each step of the traversal.
@@ -466,37 +455,27 @@ class CPUGraphTraversal : public GraphTraversal {
 					break;
 				}
 				case GRAPH_STEP: {
-					GraphStep* graph_step = (GraphStep*)this->steps[0];
-					if(graph_step->getType() == VERTEX) {
-						std::set<uint64_t> ids; for(boost::any id_ctr : graph_step->get_element_ids()) ids.insert(boost::any_cast<uint64_t>(id_ctr));
+					#ifdef VERBOSE
+					std::cout << "graph step (start)\n";
+					#endif
 
-						std::vector<Vertex*> vertices = this->getGraph()->vertices();
-						
-						if(!ids.empty()) {
-							// Create one traverser for each Vertex requested.
-							// TODO this is sort of backwards; ideally the Vertices are in a BST or similar structure.
-							for(Vertex* v : vertices) {
-								uint64_t id = boost::any_cast<uint64_t>(v->id());
-								if(0 < ids.count(id)) traversers->push_back(new Traverser(v));
-							}
-						}
-						else {
-							// Create one traverser for each Vertex in the Graph.
-							std::for_each(vertices.begin(), vertices.end(), [&traversers](Vertex* v){ traversers->push_back(new Traverser(v)); });
-						}
-					}
-					else if(graph_step->getType() == EDGE) {
-						// This should never be true since getInitialTraversal() is called.
-						throw std::runtime_error("Illegal state for traverser; likely initialization failure.");
-					}
+					GraphStep* graph_step = (GraphStep*)this->steps[0];
+					execute_graph_step_start(graph_step, traversers);
 					break;
 				}
 				case ADD_VERTEX_START_STEP: {
+					#ifdef VERBOSE
+					std::cout << "add vertex start step\n";
+					#endif
+
 					Vertex* v = this->getGraph()->add_vertex();
 					traversers->push_back(new Traverser(v));
 					break;
 				}
 				case ADD_EDGE_START_STEP: {
+					#ifdef VERBOSE
+					std::cout << "add edge start step\n";
+					#endif
 					// Need to check if there is enough info to add the Edge, then add it
 					// if we can.
 					// from() and to() are both always required here.
@@ -589,7 +568,7 @@ void CPUGraphTraversal::getInitialTraversal() {
 	}
 }
 
-CPUGraphTraversal::execute_add_property_step(AddPropertyStep* add_property_step, std::list<Traverser*>* traversers) {
+void CPUGraphTraversal::execute_add_property_step(AddPropertyStep* add_property_step, std::list<Traverser*>* traversers) {
 	if(add_property_step->get_value().type() == typeid(GraphTraversal*)) {
 		GraphTraversal* traversal = boost::any_cast<GraphTraversal*>(add_property_step->get_value());
 		std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser* trv) {
@@ -668,5 +647,57 @@ std::list<Traverser*>* CPUGraphTraversal::execute_index_step(IndexStep* index_st
 
 	return new_traversers;
 }
+
+std::list<Traverser*>* CPUGraphTraversal::execute_graph_step(GraphStep* graph_step, std::list<Traverser*>* traversers) {
+	// For each traverser, a traverser should be created for each Vertex and passed to the next step
+	CPUGraph* bg = dynamic_cast<CPUGraph*>(this->getGraph());
+
+	// Make map of element ids to counts
+	std::vector<boost::any> element_ids = graph_step->get_element_ids();
+	std::map<uint64_t, unsigned long> element_id_counts;
+	std::for_each(element_ids.begin(), element_ids.end(), [&](boost::any id_ctr){
+		uint64_t id = boost::any_cast<uint64_t>(id_ctr);
+		if(element_id_counts.find(id) != element_id_counts.end()) element_id_counts[id]++;
+		else element_id_counts[id] = 1;
+	});
+
+	std::list<Traverser*>* new_traversers = new std::list<Traverser*>;
+	// For each traverser...
+	std::for_each(traversers->begin(), traversers->end(), [&](Traverser* trv) {
+		std::for_each(element_ids.begin(), element_ids.end(), [&](boost::any id_ctr) {
+			Vertex* v = bg->get_vertex(id_ctr);
+			uint64_t id = boost::any_cast<uint64_t>(id_ctr);
+			for(auto k = 0; k < element_id_counts[id]; k++) new_traversers->push_back(new Traverser(v));
+			//TODO retain side effects, path
+		});
+	});
+
+	return new_traversers;
+}
+
+void CPUGraphTraversal::execute_graph_step_start(GraphStep* graph_step, std::list<Traverser*>* traversers) {
+	if(graph_step->getType() == VERTEX) {
+		std::list<Vertex*>& vertices = this->getGraph()->vertices();
+		
+		if(!graph_step->get_element_ids().empty()) {
+			// Create one traverser for each Vertex requested.
+			// TODO handle multiplicity
+			CPUGraph* bg = dynamic_cast<CPUGraph*>(this->getGraph());
+			for(boost::any& id_ctr : graph_step->get_element_ids()) {
+				Vertex* v = bg->get_vertex(id_ctr);
+				traversers->push_back(new Traverser(v));
+			}
+		}
+		else {
+			// Create one traverser for each Vertex in the Graph.
+			std::for_each(vertices.begin(), vertices.end(), [&traversers](Vertex* v){ traversers->push_back(new Traverser(v)); });
+		}
+	}
+	else if(graph_step->getType() == EDGE) {
+		// This should never be true since getInitialTraversal() is called.
+		throw std::runtime_error("Illegal state for traverser; likely initialization failure.");
+	}
+}
+
 //#undef VERBOSE
 #endif

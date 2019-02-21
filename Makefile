@@ -1,5 +1,5 @@
 CC := g++
-CFLAGS := --std=c++14
+CFLAGS := --std=c++14 -fno-default-inline
 
 ifeq ($(shell uname -s), Darwin)
 	LIBBITGRAPH_PATH := /usr/local/lib/libbitgraph.dylib
