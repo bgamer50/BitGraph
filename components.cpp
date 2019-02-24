@@ -16,15 +16,15 @@
 
 int main(int argc, char* argv[]) {
     CPUGraph graph;
-    /*graph.create_index(VERTEX_INDEX, NAME, [](boost::any& a) { 
+    graph.create_index(VERTEX_INDEX, NAME, [](boost::any& a) { 
             std::hash<std::string> hf;
             return hf(boost::any_cast<std::string>(a));
         }, [](boost::any& a, boost::any& b) {
             std::string c = boost::any_cast<std::string>(a);
             std::string d = boost::any_cast<std::string>(b);
             return c.compare(d) == 0;
-        });*/
-    GraphTraversalSource* g = graph.traversal();
+        });
+    GraphTraversalSource* g = static_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU();
 
     std::string filename = std::string(argv[1]);
     FILE* f = fopen(filename.c_str(), "r");
@@ -65,25 +65,30 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> elapsed = end-start;
     std::cout << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
     
-    /*std::list<Vertex*> vertices = graph.vertices();
+    std::list<Vertex*> vertices = graph.vertices();
+    /*
     for(auto it = vertices.begin(); it != vertices.end(); ++it) {
         std::string name = boost::any_cast<std::string>((*it)->property(NAME)->value());
         uint64_t id = boost::any_cast<uint64_t>((*it)->id());
         std::cout << name << ": " << id << std::endl;
     }
+    */
 
     try {
+        start = std::chrono::system_clock::now();
         g->V()->property("cc", __->id())->iterate();
         for(int k = 0; k < 1; ++k) g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+        end = std::chrono::system_clock::now();
+        elapsed = end-start;
+        std::cout << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
         g->V()->values("cc")->forEachRemaining([g](boost::any& v) {
             int id = boost::any_cast<uint64_t>(v);
-            std::cout << id << std::endl;
+            //std::cout << id << std::endl;
         });
     } catch(const std::exception& err) {
-        std::cout << err.what() << std::endl;
+        //std::cout << err.what() << std::endl;
         return -1;
-    }*/
-    
+    }
 
     fclose(f);
 }

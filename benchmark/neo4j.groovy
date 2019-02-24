@@ -2,8 +2,9 @@ LABEL_V = 'basic_vertex'
 LABEL_E = 'basic_edge'
 NAME = 'name'
 
-graph = TinkerGraph.open()
-graph.createIndex(NAME, Vertex.class)
+graph = Neo4jGraph.open('./tmp/graph')
+graph.cypher('CREATE INDEX ON :basic_vertex(name)')
+graph.tx().commit()
 g = graph.traversal()
 
 s = new Scanner(new File('C:/Users/Alex/Downloads/facebook_combined.txt'))

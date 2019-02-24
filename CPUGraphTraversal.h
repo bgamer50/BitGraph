@@ -532,6 +532,10 @@ class CPUGraphTraversal : public GraphTraversal {
 
 			return traversers;
         }
+
+	virtual CPUGraphTraversal* from_anonymous_traversal(GraphTraversal* anonymous) {
+		return new CPUGraphTraversal(this->getTraversalSource(), anonymous);
+	}
 };
 
 #include "CPUGraph.h"
@@ -573,7 +577,7 @@ void CPUGraphTraversal::execute_add_property_step(AddPropertyStep* add_property_
 		GraphTraversal* traversal = boost::any_cast<GraphTraversal*>(add_property_step->get_value());
 		std::for_each(traversers->begin(), traversers->end(), [&, this](Traverser* trv) {
 			BitVertex* v = static_cast<BitVertex*>(boost::any_cast<Vertex*>(trv->get()));
-			CPUGraphTraversal* new_trv = new CPUGraphTraversal(this->getTraversalSource(), traversal);
+			CPUGraphTraversal* new_trv = from_anonymous_traversal(traversal);
 			
 			// Execute traversal
 			std::list<Traverser*>* temp_traversers = new std::list<Traverser*>;

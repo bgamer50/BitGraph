@@ -93,7 +93,7 @@ class Index {
         inline void rebuild() {
             if(static_cast<float>(actual_size) / static_cast<float>(table.size()) < INDEX_MAX_LOAD_FACTOR) return;
 
-            size_t new_size = table.size() + INDEX_SIZE_INCR;
+            size_t new_size = table.size()*2 + INDEX_SIZE_INCR;
             
             std::vector<std::unordered_set<Element*>*> new_table;
             new_table.resize(new_size, nullptr);
