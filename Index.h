@@ -93,7 +93,7 @@ class Index {
         inline void rebuild() {
             if(static_cast<float>(actual_size) / static_cast<float>(table.size()) < INDEX_MAX_LOAD_FACTOR) return;
 
-            size_t new_size = table.size()*2 + INDEX_SIZE_INCR;
+            size_t new_size = table.size()*5 + INDEX_SIZE_INCR;
             
             std::vector<std::unordered_set<Element*>*> new_table;
             new_table.resize(new_size, nullptr);
@@ -128,8 +128,9 @@ class Index {
         }
 
         std::unordered_set<Element*> get_elements(boost::any val) {
+            size_t dict_size = dict.size();
             int64_t hash = hash_func(val);
-            size_t index = hash % dict.size();
+            size_t index = hash % dict_size;
             
             std::unordered_set<Element*> s;
 
@@ -137,7 +138,7 @@ class Index {
 
             while(!dict[index].empty() && !equals_func(dict[index], val)) {
                 ++index;
-                if(index >= dict.size()) index = 0;
+                if(index >= dict_size) index = 0;
             }
 
             if(dict[index].empty()) return s;

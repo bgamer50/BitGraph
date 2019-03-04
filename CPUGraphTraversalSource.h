@@ -7,22 +7,16 @@
 #include "AddVertexStartStep.h"
 #include "AddEdgeStartStep.h"
 class CPUGraph;
+class GPUGraphTraversalSource;
 
 class CPUGraphTraversalSource : public GraphTraversalSource {
-	private:
-		bool with_gpu;
-		GraphTraversal* get_appropriate_traversal();
-
 	public:
 		CPUGraphTraversalSource(CPUGraph* gr)
 		: GraphTraversalSource(gr) {
-			with_gpu = false;
+			// empty
 		}
 
-		CPUGraphTraversalSource* withGPU() {
-			with_gpu = true;
-			return this;
-		}
+		GPUGraphTraversalSource* withGPU();
 
 		GraphTraversal* V() {
 			GraphTraversal* trv = get_appropriate_traversal();
@@ -61,11 +55,19 @@ class CPUGraphTraversalSource : public GraphTraversalSource {
 			trv->appendStep(new AddEdgeStartStep(label));
 			return trv;
 		}
+
+		virtual GraphTraversal* get_appropriate_traversal();
 };
 
-#include "GPUGraphTraversal.h"
+#include "CPUGraph.h"
+#include "GPUGraphTraversalSource.h"
+
 GraphTraversal* CPUGraphTraversalSource::get_appropriate_traversal() {
-	return this->with_gpu ? new GPUGraphTraversal(this) : new CPUGraphTraversal(this);
+	return new CPUGraphTraversal(this);
+}
+
+GPUGraphTraversalSource* CPUGraphTraversalSource::withGPU() {
+	return new GPUGraphTraversalSource(static_cast<CPUGraph*>(this->getGraph()));
 }
 
 #endif
