@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
         }, [](boost::any& a, boost::any& b) {
             std::string c = boost::any_cast<std::string>(a);
             std::string d = boost::any_cast<std::string>(b);
-            return c.compare(d) == 0;
+            return c == d;
         });
     GraphTraversalSource* g = static_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU();
 
