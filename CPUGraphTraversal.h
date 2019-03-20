@@ -680,13 +680,11 @@ std::list<Traverser*>* CPUGraphTraversal::execute_graph_step(GraphStep* graph_st
 }
 
 void CPUGraphTraversal::execute_graph_step_start(GraphStep* graph_step, std::list<Traverser*>* traversers) {
+	CPUGraph* bg = dynamic_cast<CPUGraph*>(this->getGraph());
 	if(graph_step->getType() == VERTEX) {
-		std::list<Vertex*> vertices = this->getGraph()->vertices();
-		
 		if(!graph_step->get_element_ids().empty()) {
 			// Create one traverser for each Vertex requested.
 			// TODO handle multiplicity
-			CPUGraph* bg = dynamic_cast<CPUGraph*>(this->getGraph());
 			for(boost::any& id_ctr : graph_step->get_element_ids()) {
 				Vertex* v = bg->get_vertex(id_ctr);
 				traversers->push_back(new Traverser(v));
@@ -694,7 +692,8 @@ void CPUGraphTraversal::execute_graph_step_start(GraphStep* graph_step, std::lis
 		}
 		else {
 			// Create one traverser for each Vertex in the Graph.
-			std::for_each(vertices.begin(), vertices.end(), [&traversers](Vertex* v){ traversers->push_back(new Traverser(v)); });
+			std::vector<Vertex*>& vertices = bg->access_vertices();
+			for(size_t k = 0; k < bg->numVertices(); ++k) traversers->push_back(new Traverser(vertices[k]));
 		}
 	}
 	else if(graph_step->getType() == EDGE) {

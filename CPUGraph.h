@@ -42,6 +42,15 @@ class CPUGraph : public Graph {
 		}
 
 		/*
+			Access the raw vertex vector.  Should not be called by users.
+		*/
+		std::vector<Vertex*>& access_vertices() {
+			return this->vertex_list;
+		}
+
+		uint64_t numVertices() { return this->num_vertices; }
+
+		/*
 			The list containing the CPUGraph's edges.
 		*/
 		std::list<Edge*>& edges() { return edge_list; }

@@ -115,10 +115,10 @@ class BitVertex : public Vertex {
 					return std::vector<BitEdge*>{std::begin(this->edges_in), std::end(this->edges_in)};
 				}
 				case BOTH: {
-					std::vector<BitEdge*> both_edges;
-
-					for_each(edges_in.begin(), edges_in.end(), [&, this](BitEdge* edg) { both_edges.push_back(edg); });
-					for_each(edges_out.begin(), edges_out.end(), [&, this](BitEdge* edg) { both_edges.push_back(edg); });
+					std::vector<BitEdge*> both_edges(this->edges_out.size() + this->edges_in.size());
+					size_t k = 0;
+					for_each(edges_in.begin(), edges_in.end(), [&, this](BitEdge* edg) { both_edges[k++] = edg; });
+					for_each(edges_out.begin(), edges_out.end(), [&, this](BitEdge* edg) { both_edges[k++] = edg; });
 
 					return both_edges;
 				}
