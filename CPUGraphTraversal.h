@@ -681,7 +681,7 @@ std::list<Traverser*>* CPUGraphTraversal::execute_graph_step(GraphStep* graph_st
 
 void CPUGraphTraversal::execute_graph_step_start(GraphStep* graph_step, std::list<Traverser*>* traversers) {
 	if(graph_step->getType() == VERTEX) {
-		std::list<Vertex*>& vertices = this->getGraph()->vertices();
+		std::list<Vertex*> vertices = this->getGraph()->vertices();
 		
 		if(!graph_step->get_element_ids().empty()) {
 			// Create one traverser for each Vertex requested.

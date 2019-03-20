@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
             std::string d = boost::any_cast<std::string>(b);
             return c == d;
         });
-    GraphTraversalSource* g = static_cast<CPUGraphTraversalSource*>(graph.traversal())->withGPU();
+    GraphTraversalSource* g = static_cast<CPUGraphTraversalSource*>(graph.traversal());//->withGPU();
 
     std::string filename = std::string(argv[1]);
     FILE* f = fopen(filename.c_str(), "r");

@@ -1,6 +1,8 @@
 #ifndef CPU_GRAPH_H
 #define CPU_GRAPH_H
 
+#define CPUGRAPH_INITIAL_LIST_SIZE 100000
+
 #include "Index.h"
 #include "Graph.h"
 #include "Element.h"
@@ -15,11 +17,13 @@ enum IndexType {VERTEX_INDEX, EDGE_INDEX};
 
 class CPUGraph : public Graph {
 	private:
-		std::list<Vertex*> vertex_list;
+		std::vector<Vertex*> vertex_list = std::vector<Vertex*>(CPUGRAPH_INITIAL_LIST_SIZE);
 		std::list<Edge*> edge_list;
 		std::map<std::string, Index*> vertex_index;
 		std::unordered_map<uint64_t, Vertex*> vertex_id_map;
 		uint64_t next_edge_id = 0;
+		uint64_t next_vertex_id = 0;
+		uint64_t num_vertices = 0;
 	public:
 
 		/*
@@ -29,8 +33,13 @@ class CPUGraph : public Graph {
 
 		/*
 			The list containing the CPUGraph's vertices.
+			TODO may want to optimize this or switch to vector.
 		*/
-		std::list<Vertex*>& vertices() { return vertex_list; }
+		std::list<Vertex*> vertices() { 
+			std::list<Vertex*> view;
+			for(int k = 0; k < num_vertices; ++k) view.push_back(vertex_list[k]);
+			return view; 
+		}
 
 		/*
 			The list containing the CPUGraph's edges.
@@ -74,7 +83,7 @@ class CPUGraph : public Graph {
 		}
 };
 
-#define NEXT_VERTEX_ID_CPU() ( vertex_list.size() == 0 ? 0 : (boost::any_cast<uint64_t>(vertex_list.back()->id()) + 1) )
+#define NEXT_VERTEX_ID_CPU() ( (uint64_t)( next_vertex_id++ ))
 #define NEXT_EDGE_ID_CPU() ((uint64_t)( next_edge_id++ ))
 
 #include "CPUGraphTraversalSource.h"
@@ -93,9 +102,11 @@ GraphTraversalSource* CPUGraph::traversal() {
 	Currently not part of the higher-level api.
 */
 Vertex* CPUGraph::add_vertex(std::string label) {
+	if(this->vertex_list.size() == this->num_vertices) this->vertex_list.resize(2*num_vertices);
+
 	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU(), label);
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
-	vertex_list.push_back(v);
+	vertex_list[this->num_vertices++] = v;
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
@@ -104,9 +115,11 @@ Vertex* CPUGraph::add_vertex(std::string label) {
 	Adds a new Vertex (w/o label) to this CPUGraph.
 */
 Vertex* CPUGraph::add_vertex() {
+	if(this->vertex_list.size() == this->num_vertices) this->vertex_list.resize(2*num_vertices);
+
 	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU());
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
-	vertex_list.push_back(v);
+	vertex_list[this->num_vertices++] = v;
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
