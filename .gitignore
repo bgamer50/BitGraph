@@ -6,3 +6,5 @@
 *.exe
 *.stackdump
 test/test.*
+*.out
+prof.txt
