@@ -1,5 +1,6 @@
 CC := g++
-CFLAGS := --std=c++14 -fno-default-inline
+CFLAGS := -O3 -fopenmp --std=c++14 -fno-default-inline
+IFLAGS := -I. -Istrategy -I../gremlin++ -I../gremlin++/step/ -I../gremlin++/step/edge -I../gremlin++/strategy
 
 ifeq ($(shell uname -s), Darwin)
 	LIBBITGRAPH_PATH := /usr/local/lib/libbitgraph.dylib
@@ -20,22 +21,22 @@ endif
 	#diff -b test/test.stderr test/expected.stderr
 
 test.exe: test.o
-	$(CC) $(CFLAGS) test.o -o test.exe -I../gremlin++ -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
+	$(CC) $(CFLAGS) test.o -o test.exe $(IFLAGS) -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
 
 test.o: test.cpp
-	$(CC) $(CFLAGS) test.cpp -c -o test.o -I../gremlin++ -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
+	$(CC) $(CFLAGS) test.cpp -c -o test.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
 
 ingest.exe: ingest.o
-	$(CC) $(CFLAGS) ingest.o -o ingest.exe -I../gremlin++ -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
+	$(CC) $(CFLAGS) ingest.o -o ingest.exe $(IFLAGS) -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
 
 ingest.o: ingest_simple.cpp
-	$(CC) $(CFLAGS) ingest_simple.cpp -c -o ingest.o -I../gremlin++ -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
+	$(CC) $(CFLAGS) ingest_simple.cpp -c -o ingest.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
 
 components.exe: components.o
-	$(CC) $(CFLAGS) components.o -o components.exe -I../gremlin++ -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
+	$(CC) $(CFLAGS) components.o -o components.exe $(IFLAGS) -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
 
 components.o: components.cpp
-	$(CC) $(CFLAGS) components.cpp -c -o components.o -I../gremlin++ -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
+	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
 
 clean:
 	rm -rf *.o *.dylib *.lib *.so *.exe

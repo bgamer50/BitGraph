@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
     auto end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed = end-start;
-    std::cout << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
+    std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
     
     std::list<Vertex*> vertices = graph.vertices();
     /*
@@ -76,11 +76,18 @@ int main(int argc, char* argv[]) {
 
     try {
         start = std::chrono::system_clock::now();
-        g->V()->property("cc", __->id())->iterate();
-        for(int k = 0; k < 1; ++k) g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+        g->V()->property("d", __->out()->count())->iterate();
+        /*
+        std::list<Vertex*> vertices = graph.vertices();
+        for(auto it = vertices.begin(); it != vertices.end(); ++it) {
+            Vertex* v = *it;
+            std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
+        }*/
+        //g->V()->property("cc", __->id())->iterate();
+        //g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
         end = std::chrono::system_clock::now();
         elapsed = end-start;
-        std::cout << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
+        std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
         g->V()->values("cc")->forEachRemaining([g](boost::any& v) {
             int id = boost::any_cast<uint64_t>(v);
             //std::cout << id << std::endl;

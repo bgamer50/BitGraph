@@ -34,14 +34,14 @@ class GPUGraphTraversal : public CPUGraphTraversal {
         /*
             Filters the current traversers using a GPU vector operator Q.
         */
-        GraphTraversal* filter(std::function<std::vector<bool>(std::list<Traverser*>*)> q_filter) {
+        GraphTraversal* filter(std::function<std::vector<bool>(std::vector<Traverser*>*)> q_filter) {
             return this->appendStep(new GPUFilterStep(q_filter));
         }
 
         /*
             Matches the standard API by returning NaN if there are no traversers to evaluate.
         */
-        virtual void execute_min_step(std::list<Traverser*>* traversers, MinStep* min_step) {
+        virtual void execute_min_step(std::vector<Traverser*>* traversers, MinStep* min_step) {
             if(traversers->empty()) {
                 traversers->push_back(new Traverser(std::numeric_limits<double>::quiet_NaN()));
                 return;

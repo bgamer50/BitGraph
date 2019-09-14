@@ -56,8 +56,9 @@ timeDiff = endTime - startTime
 println('ingest time: ' + (timeDiff / 1000).toString() + 'seconds.')
 
 startTime = System.currentTimeMillis()
-g.V().property('cc', id()).iterate()
-g.V().property('cc', coalesce(both(), identity()).values('cc').min()).iterate()
+g.V().property("d", out().count()).iterate()
+//g.V().property('cc', id()).iterate()
+//g.V().property('cc', coalesce(both(), identity()).values('cc').min()).iterate()
 endTime = System.currentTimeMillis()
 timeDiff = endTime - startTime
 println('cc1x time: ' + (timeDiff / 1000).toString() + 'seconds.')

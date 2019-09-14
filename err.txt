@@ -1,0 +1,40 @@
+Ingest time: 26.9197 seconds.
+CC 1x time: 1.32073 seconds.
+Ingest time: 27.0933 seconds.
+CC 1x time: 1.31869 seconds.
+Ingest time: 27.0066 seconds.
+CC 1x time: 1.32263 seconds.
+Ingest time: 26.9798 seconds.
+CC 1x time: 1.32174 seconds.
+Ingest time: 27.0485 seconds.
+CC 1x time: 1.35315 seconds.
+Ingest time: 27.0451 seconds.
+CC 1x time: 1.32639 seconds.
+Ingest time: 26.9002 seconds.
+CC 1x time: 1.31124 seconds.
+Ingest time: 26.9302 seconds.
+CC 1x time: 1.32842 seconds.
+Ingest time: 27.0342 seconds.
+CC 1x time: 1.3124 seconds.
+Ingest time: 27.0452 seconds.
+CC 1x time: 1.30031 seconds.
+Ingest time: 0.984909 seconds.
+CC 1x time: 0.0412464 seconds.
+Ingest time: 0.9921 seconds.
+CC 1x time: 0.0416105 seconds.
+Ingest time: 0.99154 seconds.
+CC 1x time: 0.0414839 seconds.
+Ingest time: 0.989615 seconds.
+CC 1x time: 0.0416842 seconds.
+Ingest time: 0.988195 seconds.
+CC 1x time: 0.0413589 seconds.
+Ingest time: 0.988398 seconds.
+CC 1x time: 0.0411516 seconds.
+Ingest time: 0.985224 seconds.
+CC 1x time: 0.0411623 seconds.
+Ingest time: 0.99499 seconds.
+CC 1x time: 0.0410476 seconds.
+Ingest time: 0.999672 seconds.
+CC 1x time: 0.0414136 seconds.
+Ingest time: 0.990586 seconds.
+CC 1x time: 0.0408664 seconds.
