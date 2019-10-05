@@ -14,6 +14,7 @@
 #include "Vertex.h"
 #include "Direction.h"
 #include "BitEdge.h"
+#include "CPUGraph.h"
 
 /*
 Vertex type that uses a uint64_t for identifiers,
@@ -27,6 +28,9 @@ class BitVertex : public Vertex {
 	private:
 		// The id of this BitVertex
 		uint64_t vertex_id;
+
+		// The Graph this BitVertex belongs to
+		CPUGraph* graph;
 		
 		// The outgoing edges
 		std::list<BitEdge*> edges_out;
@@ -50,17 +54,26 @@ class BitVertex : public Vertex {
 		//std::mutex add_prop_mutex;
 
 	public:
-		BitVertex(uint64_t vid) {
+		BitVertex(CPUGraph* graph, uint64_t vid) {
+			this->graph = graph;
 			this->vertex_id = vid;
 			this->has_label = false;
 			this->magic = VERTEX_MAGIC_NUMBER;
 		}
 
-		BitVertex(uint64_t vid, std::string v_label) {
+		BitVertex(CPUGraph* graph, uint64_t vid, std::string v_label) {
+			this->graph = graph;
 			this->vertex_id = vid;
 			this->has_label = true;
 			this->vertex_label = v_label;
 			this->magic = VERTEX_MAGIC_NUMBER;
+		}
+
+		/*
+			Return the Graph this Vertex belongs to.
+		*/
+		virtual Graph* getGraph() {
+			return static_cast<Graph*>(this->graph);
 		}
 		
 		/*
@@ -106,16 +119,16 @@ class BitVertex : public Vertex {
 		/*
 			Get edges in a particular direction.
 		*/
-		std::vector<BitEdge*> edges(Direction dir) {
+		virtual std::vector<Edge*> edges(Direction dir) {
 			switch(dir) {
 				case OUT: {
-					return std::vector<BitEdge*>{std::begin(this->edges_out), std::end(this->edges_out)};
+					return std::vector<Edge*>{std::begin(this->edges_out), std::end(this->edges_out)};
 				}
 				case IN: {
-					return std::vector<BitEdge*>{std::begin(this->edges_in), std::end(this->edges_in)};
+					return std::vector<Edge*>{std::begin(this->edges_in), std::end(this->edges_in)};
 				}
 				case BOTH: {
-					std::vector<BitEdge*> both_edges(this->edges_out.size() + this->edges_in.size());
+					std::vector<Edge*> both_edges(this->edges_out.size() + this->edges_in.size());
 					size_t k = 0;
 					for_each(edges_in.begin(), edges_in.end(), [&, this](BitEdge* edg) { both_edges[k++] = edg; });
 					for_each(edges_out.begin(), edges_out.end(), [&, this](BitEdge* edg) { both_edges[k++] = edg; });
@@ -142,6 +155,16 @@ class BitVertex : public Vertex {
 		*/
 		virtual VertexProperty<boost::any>* property(Cardinality card, std::string key, boost::any& value) {
 			auto old_prop = this->my_properties.find(key);
+			
+			// Update the indexes if necessary.
+			if(this->graph->is_indexed(key)) {
+				if(card == SINGLE && old_prop != this->my_properties.end()) {
+					this->graph->clear_index(this, key, old_prop->second->value());
+				}
+				graph->update_index(this, key, value);
+
+			}
+
 			if(card == SINGLE) {
 				this->my_properties[key] = new VertexProperty<boost::any>(SINGLE, key, {value});
 			}

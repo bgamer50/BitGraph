@@ -113,7 +113,7 @@ GraphTraversalSource* CPUGraph::traversal() {
 Vertex* CPUGraph::add_vertex(std::string label) {
 	if(this->vertex_list.size() == this->num_vertices) this->vertex_list.resize(2*num_vertices);
 
-	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU(), label);
+	Vertex* v = new BitVertex(this, NEXT_VERTEX_ID_CPU(), label);
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
 	vertex_list[this->num_vertices++] = v;
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
@@ -126,7 +126,7 @@ Vertex* CPUGraph::add_vertex(std::string label) {
 Vertex* CPUGraph::add_vertex() {
 	if(this->vertex_list.size() == this->num_vertices) this->vertex_list.resize(2*num_vertices);
 
-	Vertex* v = new BitVertex(NEXT_VERTEX_ID_CPU());
+	Vertex* v = new BitVertex(this, NEXT_VERTEX_ID_CPU());
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
 	vertex_list[this->num_vertices++] = v;
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
@@ -142,12 +142,9 @@ Vertex* CPUGraph::get_vertex(boost::any& id) {
 	Adds a new Edge to this CPUGraph.
 */
 Edge* CPUGraph::add_edge(Vertex* out, Vertex* in, std::string label) {
-	BitVertex* from_vertex = dynamic_cast<BitVertex*>(out);
-	BitVertex* to_vertex = dynamic_cast<BitVertex*>(in);
-
-	BitEdge* new_edge = new BitEdge(NEXT_EDGE_ID_CPU(), from_vertex, to_vertex, label);
-	from_vertex->addEdge(new_edge, OUT);
-	to_vertex->addEdge(new_edge, IN);
+	BitEdge* new_edge = new BitEdge(this, NEXT_EDGE_ID_CPU(), out, in, label);
+	static_cast<BitVertex*>(out)->addEdge(new_edge, OUT);
+	static_cast<BitVertex*>(in)->addEdge(new_edge, IN);
 	edge_list.push_back(new_edge);
 	return new_edge;
 }

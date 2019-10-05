@@ -7,6 +7,9 @@
 
 class BitEdge : public Edge {
 	private:
+		// The Graph this Edge belongs to
+		CPUGraph* graph;
+
 		// The unique id of this BitEdge
 		uint64_t edge_id;
 
@@ -25,7 +28,8 @@ class BitEdge : public Edge {
 			out vertices and the given label.  Per TP3
 			standard, all Edges must have a label.
 		*/
-		BitEdge(uint64_t id, Vertex* out, Vertex* in, std::string label) {
+		BitEdge(CPUGraph* graph, uint64_t id, Vertex* out, Vertex* in, std::string label) {
+			this->graph = graph;
 			this->edge_id = id;
 			this->out_vertex = out;
 			this->in_vertex = in;
@@ -36,6 +40,7 @@ class BitEdge : public Edge {
 			Get a pointer to the id of the given Edge.
 		*/
 		virtual boost::any id() { return boost::any(this->edge_id); }
+		virtual Graph* getGraph() { return static_cast<Graph*>(this->graph); }
 		virtual std::string label() { return this->edge_label; }
 		virtual Vertex* outV() { return this->out_vertex; }
 		virtual Vertex* inV() { return this->in_vertex; }

@@ -1,6 +1,6 @@
 CC := g++
-CFLAGS := -O3 -fopenmp --std=c++14 -fno-default-inline
-IFLAGS := -I. -Istrategy -I../gremlin++ -I../gremlin++/step/ -I../gremlin++/step/edge -I../gremlin++/strategy
+CFLAGS := -O3 -fopenmp --std=c++14 -fno-default-inline 
+IFLAGS := -I. -I../gremlin++
 
 ifeq ($(shell uname -s), Darwin)
 	LIBBITGRAPH_PATH := /usr/local/lib/libbitgraph.dylib

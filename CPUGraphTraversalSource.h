@@ -3,18 +3,16 @@
 
 #include "GraphTraversalSource.h"
 #include "CPUGraphTraversal.h"
-#include "GraphStep.h"
-#include "AddVertexStartStep.h"
-#include "AddEdgeStartStep.h"
+#include "step/graph/GraphStep.h"
+#include "step/vertex/AddVertexStartStep.h"
+#include "step/edge/AddEdgeStartStep.h"
+
 class CPUGraph;
 class GPUGraphTraversalSource;
 
 class CPUGraphTraversalSource : public GraphTraversalSource {
 	public:
-		CPUGraphTraversalSource(CPUGraph* gr)
-		: GraphTraversalSource(gr) {
-			// empty
-		}
+		CPUGraphTraversalSource(CPUGraph* gr);
 
 		GPUGraphTraversalSource* withGPU();
 
@@ -60,14 +58,25 @@ class CPUGraphTraversalSource : public GraphTraversalSource {
 };
 
 #include "CPUGraph.h"
-#include "GPUGraphTraversalSource.h"
+#include "strategy/TraversalStrategy.h"
+#include "strategy/BitGraphStrategy.h"
+//#include "GPUGraphTraversalSource.h"
+
+CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
+	: GraphTraversalSource(gr) {
+		this->strategies.push_back([this](std::vector<TraversalStep*>& t) {
+			bitgraph_strategy(static_cast<CPUGraph*>(this->getGraph()), t);
+		});
+}
 
 GraphTraversal* CPUGraphTraversalSource::get_appropriate_traversal() {
 	return new CPUGraphTraversal(this);
 }
 
+/*
 GPUGraphTraversalSource* CPUGraphTraversalSource::withGPU() {
 	return new GPUGraphTraversalSource(static_cast<CPUGraph*>(this->getGraph()));
 }
+*/
 
 #endif

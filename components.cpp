@@ -43,11 +43,13 @@ int main(int argc, char* argv[]) {
 
         if(0 == names.count(std::string(id1))) v1 = boost::any_cast<Vertex*>(g->addV(LABEL_V)->property(NAME, std::string(id1))->next());
         else v1 = boost::any_cast<Vertex*>(g->V()->has(NAME, std::string(id1))->next());
+        
         names.insert(std::string(id1));
         //std::cout << boost::any_cast<uint64_t>(v1->id()) << " " << boost::any_cast<std::string>(v1->property(NAME)->value()) << "\n";
         
         if(0 == names.count(std::string(id2))) v2 = boost::any_cast<Vertex*>(g->addV(LABEL_V)->property(NAME, std::string(id2))->next());
         else v2 = boost::any_cast<Vertex*>(g->V()->has(NAME, std::string(id2))->next());
+
         names.insert(std::string(id2));
         //std::cout << boost::any_cast<uint64_t>(v2->id()) << " " << boost::any_cast<std::string>(v2->property(NAME)->value()) << "\n";
 
@@ -76,15 +78,15 @@ int main(int argc, char* argv[]) {
 
     try {
         start = std::chrono::system_clock::now();
-        g->V()->property("d", __->out()->count())->iterate();
+        //g->V()->property("d", __->out()->count())->iterate();
         /*
         std::list<Vertex*> vertices = graph.vertices();
         for(auto it = vertices.begin(); it != vertices.end(); ++it) {
             Vertex* v = *it;
             std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
         }*/
-        //g->V()->property("cc", __->id())->iterate();
-        //g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+        g->V()->property("cc", __->id())->iterate();
+        g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
         end = std::chrono::system_clock::now();
         elapsed = end-start;
         std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
