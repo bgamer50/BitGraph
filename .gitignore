@@ -7,4 +7,5 @@
 *.stackdump
 test/test.*
 *.out
+*.stats
 prof.txt
