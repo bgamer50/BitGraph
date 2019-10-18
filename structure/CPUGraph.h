@@ -98,7 +98,7 @@ class CPUGraph : public Graph {
 #define NEXT_VERTEX_ID_CPU() ( (uint64_t)( next_vertex_id++ ))
 #define NEXT_EDGE_ID_CPU() ((uint64_t)( next_edge_id++ ))
 
-#include "CPUGraphTraversalSource.h"
+#include "traversal/CPUGraphTraversalSource.h"
 #include "structure/BitVertex.h"
 
 /*
