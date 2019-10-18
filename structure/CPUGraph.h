@@ -3,7 +3,7 @@
 
 #define CPUGRAPH_INITIAL_LIST_SIZE 100000
 
-#include "data/Index.h"
+#include "index/Index.h"
 #include "structure/Graph.h"
 #include "structure/Vertex.h"
 #include "structure/Element.h"
