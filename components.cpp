@@ -4,11 +4,11 @@
 #include <ctime>
 #include <unordered_set>
 
-#include "GraphTraversal.h"
-#include "Graph.h"
-#include "CPUGraphTraversal.h"
-#include "CPUGraph.h"
-#include "C.h"
+#include "traversal/GraphTraversal.h"
+#include "structure/Graph.h"
+#include "traversal/CPUGraphTraversal.h"
+#include "structure/CPUGraph.h"
+#include "util/C.h"
 
 #define LABEL_V "basic_vertex"
 #define LABEL_E "basic_edge"
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
     
-    std::list<Vertex*> vertices = graph.vertices();
+    //std::list<Vertex*> vertices = graph.vertices();
     /*
     for(auto it = vertices.begin(); it != vertices.end(); ++it) {
         std::string name = boost::any_cast<std::string>((*it)->property(NAME)->value());
@@ -85,8 +85,10 @@ int main(int argc, char* argv[]) {
             Vertex* v = *it;
             std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
         }*/
-        g->V()->property("cc", __->id())->iterate();
-        g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+            g->V()->property("cc", __->id())->iterate();
+        for(int k = 0; k < 6; ++k) {
+            g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+        }
         end = std::chrono::system_clock::now();
         elapsed = end-start;
         std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;

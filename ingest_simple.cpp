@@ -1,10 +1,10 @@
 #include <iostream>
 #include <cstdio>
 
-#include "CPUGraph.h"
-#include "GraphTraversal.h"
+#include "structure/CPUGraph.h"
+#include "traversal/GraphTraversal.h"
 #include "Q.h"
-#include "C.h"
+#include "util/C.h"
 #include "GPUGraphTraversal.h"
 
 #define LABEL_V "basic_vertex"

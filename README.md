@@ -11,4 +11,3 @@ High-level instructions for building BitGraph projects:
 1. Ensure Gremlin++ is included.
 2. Ensure the Boost libraries are included (at minimum all dependencies for boost/any.hpp).
 3. Ensure OpenCL is properly linked and loaded.
-

@@ -5,8 +5,8 @@
 
 #include <boost/any.hpp>
 #include "step/TraversalStep.h"
-#include "Traverser.h"
-#include "CPUGraph.h"
+#include "traversal/Traverser.h"
+#include "structure/CPUGraph.h"
 
 class HasWithIndexStep : public TraversalStep {
     private:

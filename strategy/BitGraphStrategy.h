@@ -11,7 +11,7 @@ class CPUGraph;
 
 void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps);
 
-#include "CPUGraph.h"
+#include "structure/CPUGraph.h"
 #include "step/BitGraphStep.h"
 
 void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {

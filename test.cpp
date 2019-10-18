@@ -5,10 +5,10 @@
 #include <iostream>
 #include <functional>
 #include <boost/any.hpp>
-#include "P.h"
-#include "Vertex.h"
-#include "GraphTraversal.h"
-#include "CPUGraph.h"
+#include "traversal/P.h"
+#include "structure/Vertex.h"
+#include "traversal/GraphTraversal.h"
+#include "structure/CPUGraph.h"
 
 std::vector<std::function<void()>> tests;
 

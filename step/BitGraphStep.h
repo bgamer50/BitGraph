@@ -1,9 +1,11 @@
 #ifndef BITGRAPH_STEP_H
 #define BITGRAPH_STEP_H
 
-#include "Vertex.h"
+#include <unordered_map>
+
+#include "structure/Vertex.h"
 #include "step/graph/GraphStep.h"
-#include "CPUGraph.h"
+#include "structure/CPUGraph.h"
 
 class BitGraphStep: public GraphStep {
     private:
@@ -27,12 +29,10 @@ class BitGraphStep: public GraphStep {
             // Short circuit if there are no element ids.
             // Gets ALL elements.
             if(element_ids.empty()) {
-                std::list<Vertex*> vertices = bg->vertices();
+                std::vector<Vertex*>& vertices = bg->access_vertices();
                 TraverserSet new_traversers;
                 std::for_each(traversers.begin(), traversers.end(), [&](Traverser* t) {
-                    std::for_each(vertices.begin(), vertices.end(), [&](Vertex* v){
-                        new_traversers.push_back(new Traverser(v));
-                    });
+                    for(int k = 0; k < bg->numVertices(); ++k) new_traversers.push_back(new Traverser(vertices[k]));
                 });
 
                 traversers.swap(new_traversers);
@@ -44,7 +44,7 @@ class BitGraphStep: public GraphStep {
             }
 
             // Make map of element ids to counts
-            std::map<uint64_t, unsigned long> element_id_counts;
+            std::unordered_map<uint64_t, unsigned long> element_id_counts;
             std::for_each(element_ids.begin(), element_ids.end(), [&](boost::any id_ctr) {
                 uint64_t id = boost::any_cast<uint64_t>(id_ctr);
                 if(element_id_counts.find(id) != element_id_counts.end()) element_id_counts[id]++;

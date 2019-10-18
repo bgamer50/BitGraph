@@ -1,5 +1,5 @@
 CC := g++
-CFLAGS := -O3 -fopenmp --std=c++14 -fno-default-inline 
+CFLAGS := -Ofast -fopenmp --std=c++14 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
 IFLAGS := -I. -I../gremlin++
 
 ifeq ($(shell uname -s), Darwin)
@@ -33,10 +33,10 @@ ingest.o: ingest_simple.cpp
 	$(CC) $(CFLAGS) ingest_simple.cpp -c -o ingest.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
 
 components.exe: components.o
-	$(CC) $(CFLAGS) components.o -o components.exe $(IFLAGS) -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
+	$(CC) $(CFLAGS) components.o -o components.exe $(IFLAGS)
 
 components.o: components.cpp
-	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
+	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS)
 
 clean:
 	rm -rf *.o *.dylib *.lib *.so *.exe

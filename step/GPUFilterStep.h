@@ -6,7 +6,7 @@
 #include <functional>
 #include <list>
 #include <vector>
-#include "Traverser.h"
+#include "traversal/Traverser.h"
 
 #define GPU_FILTER_STEP 0x11
 
