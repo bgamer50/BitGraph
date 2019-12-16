@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
             std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
         }*/
             g->V()->property("cc", __->id())->iterate();
-        for(int k = 0; k < 6; ++k) {
+        for(int k = 0; k < 1; ++k) {
             g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
         }
         end = std::chrono::system_clock::now();

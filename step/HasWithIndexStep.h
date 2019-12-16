@@ -23,11 +23,10 @@ class HasWithIndexStep : public TraversalStep {
             std::unordered_set<Element*> elements = idx->get_elements(this->value);
             
             TraverserSet new_traversers;
-            for(auto it = traversers.begin(); it != traversers.end(); ++it) {
-                Traverser* trv = *it;
-                Element* e = static_cast<Element*>(boost::any_cast<Vertex*>(trv->get()));
+            for(Traverser trv : traversers) {
+                Element* e = static_cast<Element*>(boost::any_cast<Vertex*>(trv.get()));
                 bool advance = elements.count(e) > 0;
-                if(advance) new_traversers.push_back(trv); else delete trv;
+                if(advance) new_traversers.push_back(trv);
             }
 
             traversers.swap(new_traversers);

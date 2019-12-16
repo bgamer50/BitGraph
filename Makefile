@@ -1,6 +1,6 @@
 CC := g++
-CFLAGS := -Ofast -fopenmp --std=c++14 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
-IFLAGS := -I. -I../gremlin++
+CFLAGS := -Ofast -fopenmp --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
+IFLAGS := -I. -I../gremlin++/
 
 ifeq ($(shell uname -s), Darwin)
 	LIBBITGRAPH_PATH := /usr/local/lib/libbitgraph.dylib
@@ -37,6 +37,12 @@ components.exe: components.o
 
 components.o: components.cpp
 	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS)
+
+repeat.exe: repeat.o
+	$(CC) $(CFLAGS) repeat.o -o repeat.exe $(IFLAGS)
+
+repeat.o: repeat.cpp
+	$(CC) $(CFLAGS) repeat.cpp -c -o repeat.o $(IFLAGS)
 
 clean:
 	rm -rf *.o *.dylib *.lib *.so *.exe

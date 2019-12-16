@@ -24,7 +24,7 @@ class IndexStep : public TraversalStep {
             Index* idx = dynamic_cast<CPUGraph*>(trv->getGraph())->get_index(this->key);
 	        std::unordered_set<Element*> elements = idx->get_elements(this->value);
 	        std::for_each(elements.begin(), elements.end(), [&, this](Element* e) {
-		        Traverser* trv = new Traverser((Vertex*)e); // TODO this won't handle edges
+		        Traverser trv = Traverser((Vertex*)e); // TODO this won't handle edges
 		        traversers.push_back(trv);
 	        });
         }
