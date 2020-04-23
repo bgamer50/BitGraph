@@ -95,7 +95,7 @@ class CPUGraph : public Graph {
 		}
 };
 
-#define NEXT_VERTEX_ID_CPU() ( (uint64_t)( next_vertex_id++ ))
+#define NEXT_VERTEX_ID_CPU() ((uint64_t)( next_vertex_id++ ))
 #define NEXT_EDGE_ID_CPU() ((uint64_t)( next_edge_id++ ))
 
 #include "traversal/CPUGraphTraversalSource.h"
@@ -118,7 +118,7 @@ Vertex* CPUGraph::add_vertex(std::string label) {
 
 	Vertex* v = new BitVertex(this, NEXT_VERTEX_ID_CPU(), label);
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
-	vertex_list[this->num_vertices++] = v;
+	vertex_list[this->num_vertices++] = v; // TODO this makes deletion impossible
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
@@ -131,7 +131,7 @@ Vertex* CPUGraph::add_vertex() {
 
 	Vertex* v = new BitVertex(this, NEXT_VERTEX_ID_CPU());
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
-	vertex_list[this->num_vertices++] = v;
+	vertex_list[this->num_vertices++] = v; // TODO this makes deletion impossible
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
