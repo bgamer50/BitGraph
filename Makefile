@@ -15,22 +15,11 @@ ifeq ($(shell uname -s), Linux)
 	LIBBITGRAPH_NAME := libbitgraph.so
 endif
 
-#test: test.exe
-	#./test.exe > test/test.stdout 2> test/test.stderr
-	#diff -b test/test.stdout test/expected.stdout
-	#diff -b test/test.stderr test/expected.stderr
+valuemap.exe: valuemap.o
+	$(CC) $(CFLAGS) valuemap.o -o valuemap.exe $(IFLAGS)
 
-test.exe: test.o
-	$(CC) $(CFLAGS) test.o -o test.exe $(IFLAGS) -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
-
-test.o: test.cpp
-	$(CC) $(CFLAGS) test.cpp -c -o test.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
-
-ingest.exe: ingest.o
-	$(CC) $(CFLAGS) ingest.o -o ingest.exe $(IFLAGS) -L'C:\Program Files (x86)\AMD APP SDK\3.0\lib\x86_64' -lOpenCL
-
-ingest.o: ingest_simple.cpp
-	$(CC) $(CFLAGS) ingest_simple.cpp -c -o ingest.o $(IFLAGS) -I'C:\Program Files (x86)\AMD APP SDK\3.0\include' -include alloca.h
+valuemap.o: valuemap.cpp
+	$(CC) $(CFLAGS) valuemap.cpp -c -o valuemap.o $(IFLAGS)
 
 components.exe: components.o
 	$(CC) $(CFLAGS) components.o -o components.exe $(IFLAGS)
