@@ -34,8 +34,17 @@ timeDiff = endTime - startTime
 System.err.println('ingest time: ' + (timeDiff / 1000).toString() + 'seconds.')
 
 startTime = System.currentTimeMillis()
-g.V().property("d", out().count()).iterate()
-//g.V().property('cc', id()).iterate()
+//g.V().property("d", out().count()).iterate()
+g.V().property('cc', id()).iterate()
+g.V().property('old_cc', values('cc')).iterate()
+g.V().repeat(
+	property('old_cc','cc').
+	property('cc', both().values('cc').min())
+).until(
+	valueMap('cc','old_cc').
+	where('cc', neq('old_cc'))
+	.count().is(0)
+)
 //g.V().property('cc', coalesce(both(), identity()).values('cc').min()).iterate()
 endTime = System.currentTimeMillis()
 timeDiff = endTime - startTime
