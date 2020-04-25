@@ -85,10 +85,26 @@ int main(int argc, char* argv[]) {
             Vertex* v = *it;
             std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
         }*/
-            g->V()->property("cc", __->id())->iterate();
+        g->V()->property("cc", __->id())->iterate();
+        g->V()->property("old_cc", __->values("cc"))->iterate();
+        /*
+        The old traversal
         for(int k = 0; k < 1; ++k) {
             g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
         }
+        */
+        g->V()->repeat(
+                __->property("old_cc", __->values("cc"))
+                ->property("cc", __->both()->values("cc")->min(C<uint64_t>::compare()))
+        )
+        ->until(
+            __->valueMap({"cc","old_cc"})->by(__->unfold())
+            ->where("cc", P::neq("old_cc"))
+            ->count()
+            ->is(0)
+        )
+        ->iterate();
+
         end = std::chrono::system_clock::now();
         elapsed = end-start;
         std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
@@ -97,7 +113,7 @@ int main(int argc, char* argv[]) {
             //std::cout << id << std::endl;
         });
     } catch(const std::exception& err) {
-        //std::cout << err.what() << std::endl;
+        std::cout << err.what() << std::endl;
         return -1;
     }
 
