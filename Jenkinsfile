@@ -6,8 +6,10 @@ pipeline {
         sh '''rm -rf ../gremlin++
 git clone https://github.com/bgamer50/gremlin- -b master-dev ../gremlin++
 
+cppcheck --enable-all .
 make components.exe'''
         recordIssues()
+        publishCppcheck()
       }
     }
 
