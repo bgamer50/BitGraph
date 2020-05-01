@@ -15,6 +15,7 @@ make components.exe'''
         sh '''wget https://snap.stanford.edu/data/facebook_combined.txt.gz
 gunzip facebook_combined.txt.gz
 ./components.exe facebook_combined.txt'''
+        recordIssues()
       }
     }
 
