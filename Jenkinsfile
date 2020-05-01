@@ -5,6 +5,11 @@ pipeline {
       steps {
         sh '''rm -rf ../gremlin++
 git clone https://github.com/bgamer50/gremlin- ../gremlin++
+
+pushd ../gremlin++
+git checkout master-dev
+popd
+
 make components.exe'''
       }
     }
