@@ -3,7 +3,8 @@ pipeline {
   stages {
     stage('Build') {
       steps {
-        sh 'make components.exe'
+        sh '''git clone https://github.com/bgamer50/gremlin++ ../gremlin++
+make components.exe'''
       }
     }
 
