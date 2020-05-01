@@ -8,4 +8,5 @@
 test/test.*
 *.out
 *.stats
+*.xml
 prof.txt
