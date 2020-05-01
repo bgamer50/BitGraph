@@ -6,10 +6,9 @@ pipeline {
         sh '''rm -rf ../gremlin++
 git clone https://github.com/bgamer50/gremlin- -b master-dev ../gremlin++
 
-cppcheck --enable=all --xml --xml-version=2 -I../gremlin++ . 2> cppcheck-result.xml
+cppcheck --enable=all --xml --xml-version=2 -I../gremlin++ .
 make components.exe'''
-        recordIssues(enabledForFailure: true, aggregatingResults: true, 
-           tools: [gcc(), cppCheck()])
+        recordIssues(enabledForFailure: true, aggregatingResults: true, tools: [gcc(), cppCheck()])
       }
     }
 
