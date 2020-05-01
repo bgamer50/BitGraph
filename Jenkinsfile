@@ -6,9 +6,9 @@ pipeline {
         sh '''rm -rf ../gremlin++
 git clone https://github.com/bgamer50/gremlin- ../gremlin++
 
-pushd ../gremlin++
+cd ../gremlin++
 git checkout master-dev
-popd
+cd ../BitGraph
 
 make components.exe'''
       }
