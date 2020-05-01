@@ -44,7 +44,7 @@ g.V().repeat(
 	valueMap('cc','old_cc').
 	where('cc', neq('old_cc'))
 	.count().is(0)
-)
+).iterate()
 //g.V().property('cc', coalesce(both(), identity()).values('cc').min()).iterate()
 endTime = System.currentTimeMillis()
 timeDiff = endTime - startTime
