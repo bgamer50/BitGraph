@@ -7,6 +7,7 @@ pipeline {
 git clone https://github.com/bgamer50/gremlin- -b master-dev ../gremlin++
 
 make components.exe'''
+        recordIssues()
       }
     }
 
@@ -15,7 +16,6 @@ make components.exe'''
         sh '''wget https://snap.stanford.edu/data/facebook_combined.txt.gz
 gunzip facebook_combined.txt.gz
 ./components.exe facebook_combined.txt'''
-        recordIssues()
       }
     }
 
