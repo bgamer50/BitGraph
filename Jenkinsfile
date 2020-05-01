@@ -4,13 +4,12 @@ pipeline {
     stage('Build') {
       steps {
         sh '''rm -rf ../gremlin++
-git clone https://github.com/bgamer50/gremlin- ../gremlin++
+git clone https://github.com/bgamer50/gremlin- -b master-dev ../gremlin++
 
-cd ../gremlin++
-git checkout master-dev
-cd ../BitGraph
-
+cppcheck --enable=all .
 make components.exe'''
+        recordIssues()
+        publishCppcheck()
       }
     }
 
