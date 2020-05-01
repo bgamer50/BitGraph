@@ -4,11 +4,7 @@ pipeline {
     stage('Build') {
       steps {
         sh '''rm -rf ../gremlin++
-git clone https://github.com/bgamer50/gremlin- ../gremlin++
-
-cd ../gremlin++
-git checkout master-dev
-cd ../BitGraph
+git clone https://github.com/bgamer50/gremlin- -b master-dev ../gremlin++
 
 make components.exe'''
       }
