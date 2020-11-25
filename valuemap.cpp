@@ -17,4 +17,11 @@ int main(int argc, char* argv[]) {
         valuemap_t vm = boost::any_cast<valuemap_t>(t);
         print_valuemap(vm);
     });
+
+    boost::any b = g->V()->fold()->next();
+    std::vector<boost::any> vec = boost::any_cast<std::vector<boost::any>>(b);
+    std::for_each(vec.begin(), vec.end(), [](boost::any& a){
+        Vertex* v = boost::any_cast<Vertex*>(a);
+        std::cout << boost::any_cast<uint64_t>(v->id()) << std::endl;
+    });
 }

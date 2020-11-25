@@ -44,6 +44,10 @@ class BitEdge : public Edge {
 		virtual std::string label() { return this->edge_label; }
 		virtual Vertex* outV() { return this->out_vertex; }
 		virtual Vertex* inV() { return this->in_vertex; }
+
+		virtual Property* property(std::string key) { throw std::runtime_error("Edge properties currently unsupported!"); };
+		virtual Property* property(std::string key, boost::any value) { throw std::runtime_error("Edge properties currently unsupported!"); };
+		virtual std::vector<Property*> properties(std::vector<std::string> keys) { throw std::runtime_error("Edge properties currently unsupported!"); };
 };
 
 #endif

@@ -15,6 +15,12 @@ ifeq ($(shell uname -s), Linux)
 	LIBBITGRAPH_NAME := libbitgraph.so
 endif
 
+lca.exe: lca.o
+	$(CC) $(CFLAGS) lca.o -o lca.exe $(IFLAGS)
+
+lca.o: lca.cpp
+	$(CC) $(CFLAGS) lca.cpp -c -o lca.o $(IFLAGS)
+
 valuemap.exe: valuemap.o
 	$(CC) $(CFLAGS) valuemap.o -o valuemap.exe $(IFLAGS)
 
