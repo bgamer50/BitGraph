@@ -34,6 +34,10 @@ void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {
 						delete steps[1];
 						steps.erase(steps.begin() + 1);
 					}
+					else {
+						BitGraphStep* bitgraph_step = new BitGraphStep(true, graph_step->getType(), graph_step->get_element_ids());
+						steps[0] = bitgraph_step;
+					}
 				}
 				else {
 					BitGraphStep* bitgraph_step = new BitGraphStep(true, graph_step->getType(), graph_step->get_element_ids());
