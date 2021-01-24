@@ -19,7 +19,7 @@ enum IndexType {VERTEX_INDEX, EDGE_INDEX};
 class CPUGraph : public Graph {
 	private:
 		std::vector<Vertex*> vertex_list = std::vector<Vertex*>(CPUGRAPH_INITIAL_LIST_SIZE);
-		std::list<Edge*> edge_list;
+		std::vector<Edge*> edge_list;
 		std::unordered_map<std::string, Index*> vertex_index;
 		std::unordered_map<uint64_t, Vertex*> vertex_id_map;
 		uint64_t next_edge_id = 0;
@@ -33,12 +33,10 @@ class CPUGraph : public Graph {
 		CPUGraph(): Graph() {}
 
 		/*
-			The list containing the CPUGraph's vertices.
-			TODO may want to optimize this or switch to vector.
+			A copy of the vector containing the CPUGraph's vertices.
 		*/
-		std::list<Vertex*> vertices() { 
-			std::list<Vertex*> view;
-			for(int k = 0; k < num_vertices; ++k) view.push_back(vertex_list[k]);
+		std::vector<Vertex*> vertices() { 
+			std::vector<Vertex*> view(this->vertex_list.begin(), this->vertex_list.begin() + this->num_vertices);
 			return view; 
 		}
 
@@ -56,7 +54,10 @@ class CPUGraph : public Graph {
 		/*
 			The list containing the CPUGraph's edges.
 		*/
-		std::list<Edge*>& edges() { return edge_list; }
+		std::vector<Edge*> edges() { 
+			std::vector<Edge*> view(this->edge_list);
+			return view;
+		}
 
 		/*
 			Adds a new Vertex (w/label) to this CPUGraph.

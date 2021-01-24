@@ -6,6 +6,10 @@ Written by Alexandria Barghi
 #include "structure/CPUGraph.h"
 #define NAME "name"
 
+std::string get_string(boost::any& b) {
+    return std::string(boost::any_cast<const char*>(b));
+}
+
 int main(int charc, char* argv[]) {
     // Create a blank CPU Graph
     CPUGraph graph;
@@ -39,7 +43,8 @@ int main(int charc, char* argv[]) {
                 repeat(__->in())->emit(__->has(NAME, "D"))->
                 select("x")->limit(1)->values(NAME)->next();
         std::cout << "found the lca!" << std::endl;
-        std::cout << "The lowest common ancestor of A and D is " + std::string(boost::any_cast<const char*>(lca)) << std::endl;
+        std::cout << "The lowest common ancestor of A and D is " + get_string(lca) << std::endl;
+        std::cout << ((get_string(lca) == "C") ? "Success!" : "Failure!") << std::endl;
     } catch(std::exception& err) {
         std::cout << err.what() << std::endl;
     }

@@ -24,4 +24,10 @@ int main(int argc, char* argv[]) {
         Vertex* v = boost::any_cast<Vertex*>(a);
         std::cout << boost::any_cast<uint64_t>(v->id()) << std::endl;
     });
+
+    g->inject({1, 2, 6, 1, 3, 2, 5, 9})->dedup()->forEachRemaining([](boost::any b){std::cout << boost::any_cast<int>(b) << " ";});
+    std::cout << std::endl;
+
+    g->inject({5,4,8,1,-9,30,-110})->order()->forEachRemaining([](boost::any b){std::cout << boost::any_cast<int>(b) << " ";});
+    std::cout << std::endl;
 }

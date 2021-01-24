@@ -129,15 +129,13 @@ class BitVertex : public Vertex {
 				case IN: {
 					return std::vector<Edge*>{this->edges_in.begin(), this->edges_in.end()};
 				}
-				case BOTH: {
+				case BOTH: 
+				default: {
 					std::vector<Edge*> both_edges;
 					both_edges.insert(both_edges.end(), this->edges_in.begin(), this->edges_in.end());
 					both_edges.insert(both_edges.end(), this->edges_out.begin(), this->edges_out.end());
 
 					return both_edges;
-				}
-				default: {
-					// should never occur
 				}
 			}
 		}

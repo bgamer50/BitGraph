@@ -2,18 +2,11 @@ CC := g++
 CFLAGS := -Ofast -fopenmp --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
 IFLAGS := -I. -I../gremlin++/
 
-ifeq ($(shell uname -s), Darwin)
-	LIBBITGRAPH_PATH := /usr/local/lib/libbitgraph.dylib
-	LIBBITGRAPH_NAME := libbitgraph.dylib
-endif
-ifeq ($(shell uname -s), CYGWIN_NT-10.0)
-	LIBBITGRAPH_PATH := /usr/lib/libbitgraph.dll.a
-	LIBBITGRAPH_NAME := libbitgraph.dll.a
-endif
-ifeq ($(shell uname -s), Linux)
-	LIBBITGRAPH_PATH := /usr/lib/libbitgraph.so
-	LIBBITGRAPH_NAME := libbitgraph.so
-endif
+test_gpu.exe: test_gpu.o
+	$(CC) $(CFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS)
+
+test_gpu.o: test_gpu.cpp
+	$(CC) $(CFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
 
 lca.exe: lca.o
 	$(CC) $(CFLAGS) lca.o -o lca.exe $(IFLAGS)

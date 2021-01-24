@@ -6,7 +6,6 @@
 
 #include "traversal/GraphTraversal.h"
 #include "structure/Graph.h"
-#include "traversal/CPUGraphTraversal.h"
 #include "structure/CPUGraph.h"
 #include "util/C.h"
 
