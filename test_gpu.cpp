@@ -12,20 +12,6 @@ std::string get_string(boost::any& b) {
 }
 
 int main(int charc, char* argv[]) {
-    sparse_adj_matrix_t M;
-    M.nnz = 7;
-    M.col_ptr = {2,0,1,2,0,2,4};
-    M.row_ptr = {0,1,4,4,7};
-    M.values = {5,1,2,3,1,3,9};
-
-    std::cout << sparse_get(M, 0, 0) << sparse_get(M, 3, 2) << sparse_get(M, 2, 2) << std::endl;
-    sparse_set(M, 0, 0, 3.);
-    std::cout << sparse_get(M, 0, 0) << sparse_get(M, 3, 2) << sparse_get(M, 2, 2) << std::endl;
-    sparse_set(M, 2, 1, 5.);
-    std::cout << sparse_get(M, 2, 0) << sparse_get(M, 2, 1) << sparse_get(M, 2, 2) << std::endl;
-    sparse_set(M, 0, 0, 0);
-    std::cout << sparse_get(M, 0, 0) << std::endl;
-    /*
     // Create a blank CPU Graph
     CPUGraph graph;
     auto g = graph.traversal();
@@ -51,17 +37,6 @@ int main(int charc, char* argv[]) {
 
     std::cout << "graph created" << std::endl;
 
-    try {
-        boost::any lca = 
-            g->V()->has(NAME, "A")->
-                repeat(__->out())->emit()->as("x")->
-                repeat(__->in())->emit(__->has(NAME, "D"))->
-                select("x")->limit(1)->values(NAME)->next();
-        std::cout << "found the lca!" << std::endl;
-        std::cout << "The lowest common ancestor of A and D is " + get_string(lca) << std::endl;
-        std::cout << ((get_string(lca) == "C") ? "Success!" : "Failure!") << std::endl;
-    } catch(std::exception& err) {
-        std::cout << err.what() << std::endl;
-    }
-    */
+    cudaSetDevice(0);
+    GPUGraph gpu_graph(graph);
 }

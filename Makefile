@@ -1,12 +1,17 @@
 CC := g++
-CFLAGS := -Ofast -fopenmp --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
+CFLAGS := -Ofast --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
+
+NVCC := /usr/local/cuda-11.1/bin/nvcc
+NVCFLAGS := --forward-unknown-to-host-compiler -O3 --std=c++17 -floop-strip-mine -funsafe-math-optimizations -frename-registers
+NVLFLAGS := -lcusparse_static
+
 IFLAGS := -I. -I../gremlin++/
 
 test_gpu.exe: test_gpu.o
-	$(CC) $(CFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS)
+	$(NVCC) $(NVCFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS) $(NVLFLAGS)
 
 test_gpu.o: test_gpu.cpp
-	$(CC) $(CFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
+	$(NVCC) $(NVCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
 
 lca.exe: lca.o
 	$(CC) $(CFLAGS) lca.o -o lca.exe $(IFLAGS)
