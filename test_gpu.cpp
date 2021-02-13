@@ -5,6 +5,7 @@ Written by Alexandria Barghi
 
 #include "structure/CPUGraph.h"
 #include "structure/GPUGraph.h"
+#include "structure/reference/ReferenceVertex.h"
 #define NAME "name"
 
 std::string get_string(boost::any& b) {

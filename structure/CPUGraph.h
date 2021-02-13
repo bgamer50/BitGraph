@@ -50,6 +50,7 @@ class CPUGraph : public Graph {
 		}
 
 		uint64_t numVertices() { return this->num_vertices; }
+		uint64_t numEdges() { return this->num_edges; }
 
 		/*
 			The list containing the CPUGraph's edges.

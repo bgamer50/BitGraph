@@ -155,7 +155,17 @@ class BitVertex : public Vertex {
 		*/
 		virtual std::vector<Property*> properties(std::vector<std::string> keys) {
 			std::vector<Property*> props;
-			for(std::string& key : keys) props.push_back(this->property(key));
+			if(keys.empty()) {
+				props.resize(this->my_properties.size());
+				size_t i = 0;
+				for(std::pair<std::string, VertexProperty*> p : this->my_properties) props[i++] = p.second;
+			} 
+			else {
+				props.resize(keys.size());
+				size_t i = 0;
+				for(std::string& key : keys) props[i++] = this->property(key);
+			}
+
 			return props;
 		}
 

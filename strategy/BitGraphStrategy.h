@@ -4,15 +4,15 @@
 #include "strategy/TraversalStrategy.h"
 #include "step/graph/GraphStep.h"
 #include "step/vertex/VertexStep.h"
-#include "step/IndexStep.h"
-#include "step/HasWithIndexStep.h"
+#include "step/cpu/IndexStep.h"
+#include "step/cpu/HasWithIndexStep.h"
 
 class CPUGraph;
 
 void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps);
 
 #include "structure/CPUGraph.h"
-#include "step/BitGraphStep.h"
+#include "step/cpu/BitGraphStep.h"
 
 void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {
     if(steps[0]->uid == GRAPH_STEP) {
