@@ -19,7 +19,7 @@ class GPUGraphStep: public GraphStep {
             if(start) traversers.push_back(Traverser(boost::any())); // add an empty traverser when this is being used as a start step.
         
             // For each traverser, a traverser should be created for each Vertex and passed to the next step
-            GPUGraph* gpu_graph = static_cast<CPUGraph*>(trv->getGraph());
+            GPUGraph* gpu_graph = static_cast<GPUGraph*>(trv->getGraph());
 
             
             std::vector<boost::any> element_ids = this->get_element_ids();
@@ -27,10 +27,7 @@ class GPUGraphStep: public GraphStep {
             // Short circuit if there are no element ids.
             // Gets ALL elements.
             if(element_ids.empty()) {
-
-                
-                gpu_graph.view_vertices()
-                std::vector<Vertex*>& vertices = bg->access_vertices();
+                std::vector<Vertex*>& vertices = gpu_graph->access_vertices();
                 TraverserSet new_traversers;
                 std::for_each(traversers.begin(), traversers.end(), [&](Traverser& t) {
                     for(int k = 0; k < bg->numVertices(); ++k) new_traversers.push_back(Traverser(vertices[k]));
