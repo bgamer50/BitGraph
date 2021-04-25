@@ -8,7 +8,7 @@ class GPUReferenceVertex : public ReferenceVertex {
     public:
         size_t gpu_vertex_id;
 
-        GPURefereceVertex(size_t gpu_vertex_id, size_t cpu_vertex_id, std::string vertex_label)
+        GPUReferenceVertex(size_t gpu_vertex_id, size_t cpu_vertex_id, std::string vertex_label)
         : ReferenceVertex(cpu_vertex_id, vertex_label) {
             this->gpu_vertex_id = gpu_vertex_id;
         }

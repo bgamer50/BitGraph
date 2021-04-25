@@ -1,9 +1,9 @@
 #ifndef GPU_REFERENCE_EDGE_H
 #define GPU_REFERECNE_EDGE_H
 
-#include "structure/reference/ReferenceEdge"
-#include "structure/reference/ReferenceVertex"
-#include "structure/reference/GPUReferenceVertex"
+#include "structure/reference/ReferenceEdge.h"
+#include "structure/reference/ReferenceVertex.h"
+#include "structure/reference/GPUReferenceVertex.h"
 
 #include <string>
 

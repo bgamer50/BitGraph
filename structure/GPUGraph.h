@@ -34,11 +34,11 @@ class GPUGraph : public Graph {
         property_table_t property_table;
         
         // convert CPU ids to sequential ids
-        std::vector<GPUReferenceVertex*> vertices; // GPU -> CPU
-        std::unordered_map<uint64_t, GPUReferenceVertex*> vertex_id_map; // CPU -> GPU
+        std::vector<Vertex*> vertex_list; // GPU -> CPU
+        std::unordered_map<uint64_t, Vertex*> vertex_id_map; // CPU -> GPU
 
-        std::unordered_map<std::pair<int32_t, int32_t>, GPUReferenceEdge*> edges; // GPU -> CPU
-        std::unordered_map<uint64_t, GPUReferenceVertex*> edge_id_map; // CPU -> GPU
+        std::unordered_map<std::pair<int32_t, int32_t>, Edge*> edge_list; // GPU -> CPU
+        std::unordered_map<uint64_t, Edge*> edge_id_map; // CPU -> GPU
 
         // index edge labels for subgraph extraction
         std::unordered_map<std::string, std::vector<std::pair<int32_t, int32_t>>> edge_label_index;
@@ -48,14 +48,14 @@ class GPUGraph : public Graph {
         : Graph() {
             // Allocate vertex structures
             const size_t num_vertices = cpu_graph.numVertices();
-            this->vertices.resize(num_vertices);
+            this->vertex_list.resize(num_vertices);
 
             // Loop over vertices (note use of access_vertices() for speedup and memory conservation)
             std::vector<Vertex*>& vertices = cpu_graph.access_vertices();
             for(int gpu_vertex_id = 0; gpu_vertex_id < num_vertices; ++gpu_vertex_id) {
                 BitVertex* v = static_cast<BitVertex*>(vertices[gpu_vertex_id]);
-                this->vertices[gpu_vertex_id] = new GPUReferenceVertex(v, gpu_vertex_id);
-                this->vertex_id_map[boost::any_cast<uint64_t>(v->id())] = this->vertices[gpu_vertex_id];
+                this->vertex_list[gpu_vertex_id] = new GPUReferenceVertex(v, gpu_vertex_id);
+                this->vertex_id_map[boost::any_cast<uint64_t>(v->id())] = this->vertex_list[gpu_vertex_id];
 
                 for(Property* p : v->properties()) {
                     this->property_table[p->key()][gpu_vertex_id] = p->value();
@@ -63,7 +63,7 @@ class GPUGraph : public Graph {
             }
 
             // Allocate edge structures
-            this->edges.resize(cpu_graph.numEdges());
+            this->edge_list.resize(cpu_graph.numEdges());
             cusparseCreate(&this->cusparse_handle); // TODO may want to get this from somewhere else
             sparse_matrix_t M = sparse_make(num_vertices, num_vertices);
 
@@ -74,13 +74,13 @@ class GPUGraph : public Graph {
                 const uint64_t cpu_out_id = boost::any_cast<uint64_t>(e->outV()->id());
                 const uint64_t cpu_in_id = boost::any_cast<uint64_t>(e->inV()->id());
 
-                GPUReferenceVertex* out = this->vertices_id_map[cpu_out_id];
-                GPUReferenceVertex* in = this->vertices_id_map[cpu_in_id];
+                GPUReferenceVertex* out = this->vertex_list_id_map[cpu_out_id];
+                GPUReferenceVertex* in = this->vertex_list_id_map[cpu_in_id];
 
-                this->edges[ei] = new GPUReferenceEdge(cpu_edge_id, e->label(), out, in);
-                this->edge_id_map[cpu_edge_id] = this->edges[ei];
+                this->edge_list[ei] = new GPUReferenceEdge(cpu_edge_id, e->label(), out, in);
+                this->edge_id_map[cpu_edge_id] = this->edge_list[ei];
 
-                this->edge_label_index[label].push_back(std::make_pair(out->gpu_vertex_id, in->gpu_vertex_id));
+                this->edge_label_index[e->label()].push_back(std::make_pair(out->gpu_vertex_id, in->gpu_vertex_id));
 
                 // Update the adjacency matrix with this edge's info
                 sparse_set(M, out->gpu_vertex_id, in->gpu_vertex_id, 1.0);
@@ -102,11 +102,11 @@ class GPUGraph : public Graph {
 
         // GPUGraph-specific accessors
         virtual std::vector<Vertex*>& access_vertices() {
-            return this->vertices;
+            return this->vertex_list;
         }
 
         virtual std::vector<Edge*>& access_edges() {
-            return this->edges;
+            throw std::runtime_error("Cannot currently access edges!");
         }
 
         virtual sparse_matrix_device_t& access_adjacency_matrix() {
