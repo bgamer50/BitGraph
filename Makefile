@@ -7,11 +7,19 @@ NVLFLAGS := -lcusparse_static
 
 IFLAGS := -I. -I../gremlin++/
 
-test_gpu.exe: test_gpu.o
-	$(NVCC) $(NVCFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS) $(NVLFLAGS)
+GPULFLAGS := -L./lib/ -lbitgraph
+
+test_gpu.exe: test_gpu.o lib/libbitgraph.so
+	$(NVCC) $(NVCFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS) $(NVLFLAGS) $(GPULFLAGS)
 
 test_gpu.o: test_gpu.cpp
 	$(NVCC) $(NVCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
+
+lib/libbitgraph.so: lib/GPUTraversalHelper.o
+	$(NVCC) $(NVCFLAGS) -shared lib/GPUTraversalHelper.o -o lib/libbitgraph.so
+
+lib/GPUTraversalHelper.o: step/gpu/impl/GPUTraversalHelper.cu
+	$(NVCC) $(NVCFLAGS) step/gpu/impl/GPUTraversalHelper.cu -c -fpic -o lib/GPUTraversalHelper.o $(IFLAGS)
 
 lca.exe: lca.o
 	$(CC) $(CFLAGS) lca.o -o lca.exe $(IFLAGS)

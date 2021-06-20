@@ -4,16 +4,11 @@
 #include "strategy/TraversalStrategy.h"
 #include "step/graph/GraphStep.h"
 #include "step/vertex/VertexStep.h"
-#include "step/IndexStep.h"
-#include "step/HasWithIndexStep.h"
 
-class GPUGraph;
+#include "step/hybrid/GPUGraphStep.h"
+#include "step/gpu/GPUVertexStep.h"
 
-void gpugraph_strategy(GPUGraph* graph, std::vector<TraversalStep*>& steps);
-
-#include "structure/GPUGraph.h"
-
-void bitgraph_strategy(GPUGraph* graph, std::vector<TraversalStep*>& steps) {
+void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
     if(steps[0]->uid == GRAPH_STEP) {
 		GraphStep* graph_step = static_cast<GraphStep*>(steps[0]);
 		if(graph_step->getType() == EDGE) {
@@ -33,6 +28,10 @@ void bitgraph_strategy(GPUGraph* graph, std::vector<TraversalStep*>& steps) {
 			GraphStep* graph_step = static_cast<GraphStep*>(current_step);
 			GPUGraphStep* gpugraph_step = new GPUGraphStep(false, graph_step->getType(), graph_step->get_element_ids());
 			*it = gpugraph_step;
+		} else if(current_step->uid == VERTEX_STEP) {
+			VertexStep* vertex_step = static_cast<VertexStep*>(current_step);
+			GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type());
+			*it = gpu_vertex_step;
 		}
 	}
 }

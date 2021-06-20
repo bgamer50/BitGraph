@@ -17,9 +17,7 @@ class GPUReferenceVertex : public ReferenceVertex {
             Construct a new GPUReferenceVertex from a CPU Vertex.
             The new reference Vertex won't be linked to the original CPU Vertex.
         **/
-        GPUReferenceVertex(BitVertex* v, size_t gpu_vertex_id) {
-            this(gpu_vertex_id, v->id(), v->label());
-        }
+        GPUReferenceVertex(BitVertex* v, size_t gpu_vertex_id) : GPUReferenceVertex(gpu_vertex_id, boost::any_cast<uint64_t>(v->id()), v->label()) {}
 
 };
 

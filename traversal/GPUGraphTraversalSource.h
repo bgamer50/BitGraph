@@ -2,7 +2,6 @@
 #define GPU_GRAPH_TRAVERSAL_SOURCE_H
 
 #include "traversal/GraphTraversalSource.h"
-
 class GPUGraph;
 
 class GPUGraphTraversalSource : public GraphTraversalSource {
@@ -14,11 +13,11 @@ class GPUGraphTraversalSource : public GraphTraversalSource {
 #include "strategy/TraversalStrategy.h"
 #include "strategy/GPUGraphStrategy.h"
 
-CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
-	: GraphTraversalSource(gr) {
-		this->strategies.push_back([this](std::vector<TraversalStep*>& t) {
-			gpugraph_strategy(static_cast<GPUGraph*>(this->getGraph()), t);
-		});
-}
+GPUGraphTraversalSource::GPUGraphTraversalSource(GPUGraph* gr)
+: GraphTraversalSource(static_cast<Graph*>(gr)) {
+			this->strategies.push_back([](std::vector<TraversalStep*>& t) {
+				gpugraph_strategy(t);
+			});
+		}
 
 #endif

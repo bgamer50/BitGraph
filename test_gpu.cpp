@@ -40,4 +40,11 @@ int main(int charc, char* argv[]) {
 
     cudaSetDevice(0);
     GPUGraph gpu_graph(graph);
+    auto h = gpu_graph.traversal();
+    h->V()->out()->forEachRemaining([](boost::any& v){
+        Vertex* vtx = boost::any_cast<Vertex*>(v);
+        auto id = boost::any_cast<uint64_t>(vtx->id());
+        auto label = boost::any_cast<std::string>(vtx->label());
+        std::cout << "(" << id << ", " << label << ")" << std::endl;
+    });
 }

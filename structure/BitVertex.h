@@ -93,7 +93,7 @@ class BitVertex : public Vertex {
 			no label for the Vertex
 		*/
 		virtual std::string label() {
-			return has_label ? std::string(vertex_label) : NULL;
+			return has_label ? std::string(vertex_label) : "";
 		}
 
 		/*
@@ -208,6 +208,10 @@ class BitVertex : public Vertex {
 		*/
 		virtual Property* property(std::string key, boost::any& value) {
 			return this->property(SINGLE, key, value);
+		}
+
+		virtual std::vector<Property*> properties() {
+			return this->properties({});
 		}
 };
 

@@ -5,6 +5,7 @@
 #include <boost/any.hpp>
 #include "step/graph/GraphStep.h"
 
+
 class GPUGraphStep: public GraphStep {
     private:
         bool start;
@@ -15,7 +16,11 @@ class GPUGraphStep: public GraphStep {
             this->start = start;
         }
 
-        virtual void apply(GraphTraversal* trv, TraverserSet& traversers) {
+        virtual void apply(GraphTraversal* trv, TraverserSet& traversers);
+};
+
+#include "structure/GPUGraph.h"
+void GPUGraphStep::apply(GraphTraversal* trv, TraverserSet& traversers) {
             if(start) traversers.push_back(Traverser(boost::any())); // add an empty traverser when this is being used as a start step.
         
             // For each traverser, a traverser should be created for each Vertex and passed to the next step
@@ -28,9 +33,10 @@ class GPUGraphStep: public GraphStep {
             // Gets ALL elements.
             if(element_ids.empty()) {
                 std::vector<Vertex*>& vertices = gpu_graph->access_vertices();
+                size_t num_vertices = vertices.size();
                 TraverserSet new_traversers;
                 std::for_each(traversers.begin(), traversers.end(), [&](Traverser& t) {
-                    for(int k = 0; k < bg->numVertices(); ++k) new_traversers.push_back(Traverser(vertices[k]));
+                    for(int k = 0; k < num_vertices; ++k) new_traversers.push_back(Traverser(vertices[k]));
                 });
 
                 traversers.swap(new_traversers);
@@ -50,8 +56,8 @@ class GPUGraphStep: public GraphStep {
             // For each traverser...
             std::for_each(traversers.begin(), traversers.end(), [&](Traverser& trv) {
                 std::for_each(element_ids.begin(), element_ids.end(), [&](boost::any id_ctr) {
-                    Vertex* v = bg->get_vertex(id_ctr);
                     uint64_t id = boost::any_cast<uint64_t>(id_ctr);
+                    Vertex* v = gpu_graph->get_vertex_with_cpu_id(id);
                     for(auto k = 0; k < element_id_counts[id]; k++) new_traversers.push_back(Traverser(v));
                     //TODO retain side effects, path
                 });
@@ -59,6 +65,5 @@ class GPUGraphStep: public GraphStep {
 
             traversers.swap(new_traversers);
         }
-}
 
 #endif
