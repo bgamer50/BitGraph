@@ -55,21 +55,13 @@ std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_dev
     
     cudaMalloc((void**) &result, sizeof(int32_t) * N);
     k_quadvv_get_mem<<<1,1>>>(M.row_ptr, gpu_element_traversers, result, N);
-    //cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess) {
         // print the CUDA error message and exit
         printf("CUDA error: %s\n", cudaGetErrorString(error));
         exit(EXIT_FAILURE);
     }
-    
-    int32_t* result_cpu = (int32_t*)malloc(sizeof(int32_t) * N);
-    std::cout << std::endl;
-    cudaMemcpy(result_cpu, result, sizeof(int32_t) * N, cudaMemcpyDeviceToHost);
-    std::cout << "<";
-    for(int k = 0; k < N; ++k) std::cout << result_cpu[k] << ",";
-    std::cout << ">" << std::endl;
-    free(result_cpu);
 
     prefix_sum(&result, N); // result now holds the prefix sums.
 
@@ -83,6 +75,7 @@ std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_dev
     // Then we run a kernel that actually spits out the column #s (a.k.a. adjacent vertices in the out-direction)
     // TODO this doesn't work for the in-direction
     k_quadvv_get_adj<<<1,10>>>(M.row_ptr, M.col_ptr, gpu_element_traversers, result, output, output_origin, N);
+    cudaDeviceSynchronize();
     
     return std::make_tuple(output, output_origin, N_prime);
 }

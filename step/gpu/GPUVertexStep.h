@@ -38,7 +38,6 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
     if(this->direction == IN) {
         adjacency_matrix = transpose_csr_matrix(gpu_graph->get_cusparse_handle(), adjacency_matrix);
     }
-    std::cout << "jia\n";
 
     int32_t* gpu_element_traversers = to_gpu(traversers);
 
