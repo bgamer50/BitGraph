@@ -7,6 +7,7 @@
 
 #include "step/hybrid/GPUGraphStep.h"
 #include "step/gpu/GPUVertexStep.h"
+#include "step/hybrid/GPUPropertyStep.h"
 
 void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
     if(steps[0]->uid == GRAPH_STEP) {
@@ -32,6 +33,12 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 			VertexStep* vertex_step = static_cast<VertexStep*>(current_step);
 			GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type());
 			*it = gpu_vertex_step;
+		} else if(current_step->uid == PROPERTY_STEP) {
+			PropertyStep* property_step = static_cast<PropertyStep*>(current_step);
+			if(property_step->get_type() == PROPERTY) throw std::runtime_error("Getting properties not supported on GPU, only raw values!");
+			
+			GPUPropertyStep* gpu_property_step = new GPUPropertyStep(property_step->get_keys());
+			*it = gpu_property_step;
 		}
 	}
 }

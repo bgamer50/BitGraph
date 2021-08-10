@@ -40,10 +40,12 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
 
     if(this->gs_type == VERTEX) {
         // (vertex id) -> (originating traverser)
-        std::tuple<int32_t*, int32_t*, int> new_gpu_traversers = gpu_query_adjacency_v_to_v(adjacency_matrix, gpu_element_traversers);
+        std::tuple<int32_t*, int32_t*, int> new_gpu_traversers = gpu_query_adjacency_v_to_v(adjacency_matrix, gpu_element_traversers, traversers.size());
+        
         int32_t* traversed_vertices_device = std::get<0>(new_gpu_traversers);
         int32_t* originating_traversers_device = std::get<1>(new_gpu_traversers);
         int num_new_traversers = std::get<2>(new_gpu_traversers);
+        std::cout << num_new_traversers << " new traversers" << std::endl;
 
         std::vector<int32_t> new_traversed_vertices(num_new_traversers);
         std::vector<int32_t> originating_traversers(num_new_traversers);
@@ -63,6 +65,7 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
             auto& se = originating_traverser.get_side_effects();
             new_traversers[k].get_side_effects().insert(se.begin(), se.end());
         }
+        traversers.swap(new_traversers);
     } else {
         // (outV id, inV id) -> (originating traverser)
         std::pair<std::pair<int32_t*, int32_t*>, int32_t*> new_gpu_traversers;

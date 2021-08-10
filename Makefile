@@ -1,7 +1,7 @@
 CC := g++
 CFLAGS := -Ofast --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
 
-NVCC := /usr/local/cuda-11.1/bin/nvcc
+NVCC := /usr/local/cuda/bin/nvcc
 NVCFLAGS := --forward-unknown-to-host-compiler -O3 --std=c++17 -floop-strip-mine -funsafe-math-optimizations -frename-registers
 NVLFLAGS := -lcusparse_static
 
@@ -13,7 +13,7 @@ test_gpu.exe: test_gpu.o lib/libbitgraph.so
 	$(NVCC) $(NVCFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS) $(NVLFLAGS) $(GPULFLAGS)
 
 test_gpu.o: test_gpu.cpp
-	$(NVCC) $(NVCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
+	$(NVCC) -x cu $(NVCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
 
 lib/libbitgraph.so: lib/GPUTraversalHelper.o
 	$(NVCC) $(NVCFLAGS) -shared lib/GPUTraversalHelper.o -o lib/libbitgraph.so

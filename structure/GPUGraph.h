@@ -19,7 +19,7 @@
 #include <boost/functional/hash.hpp>
 #include <utility>
 
-// property name -> vertex -> value
+// property name -> vertex (gpu id) -> value
 typedef std::unordered_map<std::string, std::unordered_map<size_t, boost::any>> property_table_t;
 
 class GPUGraph : public Graph {
@@ -121,6 +121,10 @@ class GPUGraph : public Graph {
 
         sparse_matrix_device_t& access_adjacency_matrix() {
             return this->adjacency_matrix;
+        }
+
+        inline boost::any get_property(std::string property_key, size_t gpu_vertex_id) {
+            return this->property_table[property_key][gpu_vertex_id];
         }
 
 };
