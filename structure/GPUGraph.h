@@ -123,6 +123,10 @@ class GPUGraph : public Graph {
             return this->adjacency_matrix;
         }
 
+        cusparseHandle_t& get_cusparse_handle() {
+            return this->cusparse_handle;
+        }
+
         inline boost::any get_property(std::string property_key, size_t gpu_vertex_id) {
             return this->property_table[property_key][gpu_vertex_id];
         }

@@ -35,6 +35,10 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
 
     // Manipulate the graph's sparse matrix directly
     sparse_matrix_device_t& adjacency_matrix = gpu_graph->access_adjacency_matrix();
+    if(this->direction == IN) {
+        adjacency_matrix = transpose_csr_matrix(gpu_graph->get_cusparse_handle(), adjacency_matrix);
+    }
+    std::cout << "jia\n";
 
     int32_t* gpu_element_traversers = to_gpu(traversers);
 
@@ -45,7 +49,6 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
         int32_t* traversed_vertices_device = std::get<0>(new_gpu_traversers);
         int32_t* originating_traversers_device = std::get<1>(new_gpu_traversers);
         int num_new_traversers = std::get<2>(new_gpu_traversers);
-        std::cout << num_new_traversers << " new traversers" << std::endl;
 
         std::vector<int32_t> new_traversed_vertices(num_new_traversers);
         std::vector<int32_t> originating_traversers(num_new_traversers);
