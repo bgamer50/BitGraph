@@ -39,6 +39,12 @@ components.exe: components.o
 components.o: components.cpp
 	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS)
 
+components_gpu.exe: components_gpu.o
+	$(NVCC) $(NVCFLAGS) components_gpu.o -o components_gpu.exe $(IFLAGS) $(NVLFLAGS) $(GPULFLAGS)
+
+components_gpu.o: components_gpu.cpp
+	$(NVCC) -x cu $(NVCFLAGS) components_gpu.cpp -c -o components_gpu.o $(IFLAGS)
+
 repeat.exe: repeat.o
 	$(CC) $(CFLAGS) repeat.o -o repeat.exe $(IFLAGS)
 

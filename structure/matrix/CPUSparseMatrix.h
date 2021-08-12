@@ -36,6 +36,7 @@ float sparse_get(sparse_matrix_t& M, int32_t i, int32_t j) {
 void sparse_set(sparse_matrix_t& M, int32_t i, int32_t j, float val) {
     int32_t rs = M.row_ptr[i];
     int32_t re = M.row_ptr[i+1];
+
     for(int32_t k = rs; k < re; ++k) {
         if(j == M.col_ptr[k]) { 
             if(val != 0.0) M.values[k] = val;
@@ -56,7 +57,7 @@ void sparse_set(sparse_matrix_t& M, int32_t i, int32_t j, float val) {
     }
     else {
         int c = rs;
-        while(M.col_ptr[c] < j) ++c;
+        while(c < M.col_ptr.size() && M.col_ptr[c] < j) ++c;
         M.col_ptr.insert(M.col_ptr.begin() + c, j);
         M.values.insert(M.values.begin() + c, val);
     }
