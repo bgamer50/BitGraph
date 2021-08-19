@@ -69,6 +69,7 @@ class GPUGraph : public Graph {
             // Loop over edges
             size_t ei = 0;
             for(Edge* e : cpu_graph.edges()) {
+                if(ei % 1000 == 0) std::cout << "processing edge " << ei << std::endl;
                 const uint64_t cpu_edge_id = boost::any_cast<uint64_t>(e->id());
                 const uint64_t cpu_out_id = boost::any_cast<uint64_t>(e->outV()->id());
                 const uint64_t cpu_in_id = boost::any_cast<uint64_t>(e->inV()->id());

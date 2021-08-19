@@ -68,31 +68,56 @@ int main(int argc, char* argv[]) {
     cudaSetDevice(0);
     GPUGraph gpu_graph(graph);
     std::cout << "gpu graph created!" << std::endl;
-    g = gpu_graph.traversal();
+    auto h = gpu_graph.traversal();
 
+    /*
     try {
-        g->V()->id()->forEachRemaining([](boost::any& cnt){
+        h->V()->id()->forEachRemaining([](boost::any& cnt){
             std::cout << boost::any_cast<uint64_t>(cnt) << std::endl;
         });
     } catch(const std::exception& err) {
         std::cout << err.what() << std::endl;
         return -1;
     }
+    */
 
     auto end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
 
+    size_t degrees = std::stoi(std::string(argv[2]));
     try {
+        // CPU
         start = std::chrono::system_clock::now();
         // do components
-        g->V()->map(__->out()->dedup()->values(NAME))->forEachRemaining([](boost::any z){
+        GraphTraversal* trv_cpu = g->V();
+        for(size_t k = 0; k < degrees; ++k) trv_cpu = trv_cpu->out();
+        trv_cpu->values(NAME)->iterate();
+        /*
+        forEachRemaining([](boost::any z){
             std::cout << boost::any_cast<std::string>(z) << std::endl;
         });
+        */
         end = std::chrono::system_clock::now();
         elapsed = end-start;
-        std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
+        std::cerr << "Out Time (CPU): " << elapsed.count() << " seconds." << std::endl;
+
+
+        // GPU
+        start = std::chrono::system_clock::now();
+        // do components
+        GraphTraversal* trv_gpu = h->V();
+        for(size_t k = 0; k < degrees; ++k) trv_gpu = trv_gpu->out();
+        trv_gpu->values(NAME)->iterate();
+        /*
+        forEachRemaining([](boost::any z){
+            std::cout << boost::any_cast<std::string>(z) << std::endl;
+        });
+        */
+        end = std::chrono::system_clock::now();
+        elapsed = end-start;
+        std::cerr << "Out Time (GPU): " << elapsed.count() << " seconds." << std::endl;
     } catch(const std::exception& err) {
         std::cout << err.what() << std::endl;
         return -1;
