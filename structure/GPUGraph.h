@@ -66,6 +66,11 @@ class GPUGraph : public Graph {
             cusparseCreate(&this->cusparse_handle); // TODO may want to get this from somewhere else
             sparse_matrix_t M = sparse_make(num_vertices, num_vertices);
 
+            // Pre-set container sizes
+            const size_t num_edges = cpu_graph.numEdges();
+            this->edge_list.reserve(num_edges);
+            this->edge_id_map.reserve(num_edges);
+
             // Loop over edges
             size_t ei = 0;
             for(Edge* e : cpu_graph.edges()) {

@@ -2,7 +2,7 @@ CC := g++
 CFLAGS := -Ofast --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
 
 NVCC := /usr/local/cuda/bin/nvcc
-NVCFLAGS := --forward-unknown-to-host-compiler -O3 --std=c++17 -floop-strip-mine -funsafe-math-optimizations -frename-registers
+NVCFLAGS := --forward-unknown-to-host-compiler -pg -O3 --std=c++17 -floop-strip-mine -funsafe-math-optimizations -frename-registers
 NVLFLAGS := -lcusparse_static
 
 IFLAGS := -I. -I../gremlin++/
