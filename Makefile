@@ -22,10 +22,10 @@ lib/GPUTraversalHelper.o: step/gpu/impl/GPUTraversalHelper.cu
 	$(NVCC) $(NVCFLAGS) step/gpu/impl/GPUTraversalHelper.cu -c -fpic -o lib/GPUTraversalHelper.o $(IFLAGS)
 
 lca.exe: lca.o
-	$(CC) $(CFLAGS) lca.o -o lca.exe $(IFLAGS)
+	$(NVCC) $(NVCFLAGS) lca.o -o lca.exe $(IFLAGS) $(NVLFLAGS)
 
 lca.o: lca.cpp
-	$(CC) $(CFLAGS) lca.cpp -c -o lca.o $(IFLAGS)
+	$(NVCC) -x cu $(NVCFLAGS) lca.cpp -c -o lca.o $(IFLAGS)
 
 valuemap.exe: valuemap.o
 	$(CC) $(CFLAGS) valuemap.o -o valuemap.exe $(IFLAGS)

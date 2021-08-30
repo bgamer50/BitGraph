@@ -4,6 +4,7 @@ Written by Alexandria Barghi
 */
 
 #include "structure/CPUGraph.h"
+#include "structure/GPUGraph.h"
 #define NAME "name"
 
 std::string get_string(boost::any& b) {
@@ -35,6 +36,8 @@ int main(int charc, char* argv[]) {
     }
 
     std::cout << "graph created" << std::endl;
+    GPUGraph gpu_graph(graph);
+    g = gpu_graph.traversal();
 
     try {
         boost::any lca = 

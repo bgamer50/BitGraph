@@ -10,6 +10,7 @@
 #include "step/hybrid/GPUPropertyStep.h"
 
 void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
+	size_t skip_steps = 0;
     if(steps[0]->uid == GRAPH_STEP) {
 		GraphStep* graph_step = static_cast<GraphStep*>(steps[0]);
 		if(graph_step->getType() == EDGE) {
@@ -21,24 +22,45 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 		graph_step = static_cast<GraphStep*>(steps[0]);
         GPUGraphStep* gpugraph_step = new GPUGraphStep(true, graph_step->getType(), graph_step->get_element_ids());
 		steps[0] = gpugraph_step;
+		
+		++skip_steps;
 	}
 
-	for(auto it = steps.begin() + 1; it != steps.end(); ++it) {
+	for(auto it = steps.begin() + skip_steps; it != steps.end(); ++it) {
 		TraversalStep* current_step = *it;
-        if(current_step->uid == GRAPH_STEP) {
-			GraphStep* graph_step = static_cast<GraphStep*>(current_step);
-			GPUGraphStep* gpugraph_step = new GPUGraphStep(false, graph_step->getType(), graph_step->get_element_ids());
-			*it = gpugraph_step;
-		} else if(current_step->uid == VERTEX_STEP) {
-			VertexStep* vertex_step = static_cast<VertexStep*>(current_step);
-			GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type());
-			*it = gpu_vertex_step;
-		} else if(current_step->uid == PROPERTY_STEP) {
-			PropertyStep* property_step = static_cast<PropertyStep*>(current_step);
-			if(property_step->get_type() == PROPERTY) throw std::runtime_error("Getting properties not supported on GPU, only raw values!");
+		switch(current_step->uid) {
+			case GRAPH_STEP: {
+				GraphStep* graph_step = static_cast<GraphStep*>(current_step);
+				GPUGraphStep* gpugraph_step = new GPUGraphStep(false, graph_step->getType(), graph_step->get_element_ids());
+				*it = gpugraph_step;
+				break;
+			}
+
+			case VERTEX_STEP: {
+				VertexStep* vertex_step = static_cast<VertexStep*>(current_step);
+				GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type());
+				*it = gpu_vertex_step;
+				break;
+			}
+
+			case PROPERTY_STEP: {
+				PropertyStep* property_step = static_cast<PropertyStep*>(current_step);
+				if(property_step->get_type() == PROPERTY) throw std::runtime_error("Getting properties not supported on GPU, only raw values!");
+				
+				GPUPropertyStep* gpu_property_step = new GPUPropertyStep(property_step->get_keys());
+				*it = gpu_property_step;
+				break;
+			}
 			
-			GPUPropertyStep* gpu_property_step = new GPUPropertyStep(property_step->get_keys());
-			*it = gpu_property_step;
+			case HAS_STEP: {
+				HasStep* has_step = static_cast<HasStep*>(current_step);
+				has_step->set_acquirer([](GraphTraversalSource* src, Vertex* v, std::string& key){
+					GPUGraph* gpu_graph = static_cast<GPUGraph*>(src->getGraph());
+					GPUReferenceVertex* gpu_v = static_cast<GPUReferenceVertex*>(v);
+					return gpu_graph->get_property(key, gpu_v->gpu_vertex_id);
+				});
+				break;
+			}
 		}
 	}
 }

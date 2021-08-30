@@ -144,7 +144,12 @@ class GPUGraph : public Graph {
         }
 
         inline boost::any get_property(std::string property_key, size_t gpu_vertex_id) {
-            return this->property_table[property_key][gpu_vertex_id];
+            auto it = this->property_table.find(property_key);
+            if(it == this->property_table.end()) return boost::any();
+            
+            auto itt = it->second.find(gpu_vertex_id);
+            if(itt == it->second.end()) return boost::any();
+            else return boost::any(itt->second);
         }
 
 };
