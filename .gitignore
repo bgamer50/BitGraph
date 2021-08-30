@@ -10,3 +10,5 @@ test/test.*
 *.stats
 *.xml
 prof.txt
+data/facebook.txt
+data/twitter.txt
