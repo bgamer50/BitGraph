@@ -51,7 +51,7 @@ int32_t* to_gpu(TraverserSet& traversers) {
     gpu_element_traversers: The traversers as literal objects (an array of of Vertex ids.)
     N: The number of initial traversers.
 **/
-std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N) {
+std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N) {
     int32_t* result;
     int32_t* output;
     int32_t* output_origin;
@@ -69,14 +69,13 @@ std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_dev
     prefix_sum(&result, N); // result now holds the prefix sums.
 
     // CPU needs to know ps information anyways, so we copy it and cudaMalloc the sum
-    int N_prime; // = result[N-1]; # of output traversers
+    int32_t N_prime; // = result[N-1]; # of output traversers
     cudaMemcpy(&N_prime, &result[N-1], sizeof(int32_t) * 1, cudaMemcpyDeviceToHost);
     
     cudaMalloc((void**) &output, sizeof(int32_t) * N_prime);
     cudaMalloc((void**) &output_origin, sizeof(int32_t) * N_prime);
 
-    // Then we run a kernel that actually spits out the column #s (a.k.a. adjacent vertices in the out-direction)
-    // TODO this doesn't work for the in-direction
+    // Then we run a kernel that actually spits out the column #s (a.k.a. adjacent vertices in the out-direction, or in-direction if this matrix has been transposed)
     k_quadvv_get_adj<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(M.row_ptr, M.col_ptr, gpu_element_traversers, result, output, output_origin, N);
     cudaDeviceSynchronize();
     
@@ -126,7 +125,7 @@ __global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T,
         
         for(int j = start; j < end; ++j) {
             O[output_index] = col_ptr[j];
-            OO[output_index] = vertex;
+            OO[output_index] = i;
             ++output_index;
         }
     }

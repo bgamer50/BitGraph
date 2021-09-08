@@ -40,6 +40,7 @@ int main(int charc, char* argv[]) {
     g = gpu_graph.traversal();
 
     try {
+        
         boost::any lca = 
             g->V()->has(NAME, "A")->
                 repeat(__->out())->emit()->as("x")->
@@ -48,6 +49,7 @@ int main(int charc, char* argv[]) {
         std::cout << "found the lca!" << std::endl;
         std::cout << "The lowest common ancestor of A and D is " + get_string(lca) << std::endl;
         std::cout << ((get_string(lca) == "C") ? "Success!" : "Failure!") << std::endl;
+        
     } catch(std::exception& err) {
         std::cout << err.what() << std::endl;
     }

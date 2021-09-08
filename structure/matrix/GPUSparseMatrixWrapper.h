@@ -124,4 +124,12 @@ sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matr
  * Converts a wrapped cusparse CSR matrix on the device to a CSR sparse matrix on the host. 
  **/
 sparse_matrix_t sparse_convert_device_to_host(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix);
+
+void destroy_sparse_matrix(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix) {
+    //cusparseDestroySpMat(device_matrix.descriptor);
+    cudaFree(device_matrix.values);
+    cudaFree(device_matrix.row_ptr);
+    cudaFree(device_matrix.col_ptr);
+}
+
 #endif
