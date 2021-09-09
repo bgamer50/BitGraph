@@ -152,6 +152,15 @@ class GPUGraph : public Graph {
             else return boost::any(itt->second);
         }
 
+        inline void set_property(std::string property_key, size_t gpu_vertex_id, boost::any value) {
+            if(gpu_vertex_id >= this->vertex_list.size()) {
+                throw std::runtime_error("Invalid Vertex ID!");
+            }
+
+            // implicitly creates new table entry for a new property key
+            this->property_table[property_key][gpu_vertex_id] = value;
+        }
+
 };
 
 #include "traversal/GPUGraphTraversalSource.h"
