@@ -4,7 +4,6 @@ BitGraph is a graph backend that uses the Gremlin traversal language.  It is cur
 It is licensed under the Apache 2.0 license.
 
 Currently BitGraph supports the following platforms:
-  - Windows (Cygwin64)
   - Linux
 
 BitGraph is a header library, so setting the include directory will suffice.
