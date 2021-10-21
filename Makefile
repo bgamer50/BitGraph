@@ -1,31 +1,25 @@
-CC := g++
-CFLAGS := -Ofast --std=c++17 -floop-interchange -floop-strip-mine -funsafe-math-optimizations -frename-registers
+CC :=  /opt/clang+llvm-13.0.0-aarch64-linux-gnu/bin/clang++ 
+CFLAGS := -Ofast --std=c++17 -funsafe-math-optimizations -frename-registers
 
-NVCC := /usr/local/cuda/bin/nvcc
-NVCFLAGS := --forward-unknown-to-host-compiler -pg -O3 --std=c++17 -floop-strip-mine -funsafe-math-optimizations -frename-registers
-NVLFLAGS := -lcusparse_static
+CUDAARCH := sm_53
+CUDALIB := /usr/local/cuda/lib64
+
+GPUCFLAGS := -Ofast --std=c++17 -xcuda --cuda-gpu-arch=$(CUDAARCH) -funsafe-math-optimizations -frename-registers
+GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread
 
 IFLAGS := -I. -I../gremlin++/
 
-GPULFLAGS := -L./lib/ -lbitgraph
-
-test_gpu.exe: test_gpu.o lib/libbitgraph.so
-	$(NVCC) $(NVCFLAGS) test_gpu.o -o test_gpu.exe $(IFLAGS) $(NVLFLAGS) $(GPULFLAGS)
+test_gpu.exe: test_gpu.o
+	$(CC) $(CFLAGS) test_gpu.o -o test_gpu.exe $(GPULFLAGS)
 
 test_gpu.o: test_gpu.cpp
-	$(NVCC) -x cu $(NVCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
-
-lib/libbitgraph.so: lib/GPUTraversalHelper.o
-	$(NVCC) $(NVCFLAGS) -shared lib/GPUTraversalHelper.o -o lib/libbitgraph.so
-
-lib/GPUTraversalHelper.o: step/gpu/impl/GPUTraversalHelper.cu
-	$(NVCC) $(NVCFLAGS) step/gpu/impl/GPUTraversalHelper.cu -c -fpic -o lib/GPUTraversalHelper.o $(IFLAGS)
+	$(CC) $(GPUCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
 
 lca.exe: lca.o
-	$(NVCC) $(NVCFLAGS) lca.o -o lca.exe $(IFLAGS) $(NVLFLAGS)
+	$(CC) $(CFLAGS) lca.o -o lca.exe $(GPULFLAGS)
 
 lca.o: lca.cpp
-	$(NVCC) -x cu $(NVCFLAGS) lca.cpp -c -o lca.o $(IFLAGS)
+	$(CC) $(GPUCFLAGS) lca.cpp -c -o lca.o $(IFLAGS)
 
 valuemap.exe: valuemap.o
 	$(CC) $(CFLAGS) valuemap.o -o valuemap.exe $(IFLAGS)
@@ -40,10 +34,10 @@ components.o: components.cpp
 	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS)
 
 components_gpu.exe: components_gpu.o
-	$(NVCC) $(NVCFLAGS) components_gpu.o -o components_gpu.exe $(IFLAGS) $(NVLFLAGS) $(GPULFLAGS)
+	$(CC) $(CFLAGS) components_gpu.o -o components_gpu.exe $(GPULFLAGS)
 
 components_gpu.o: components_gpu.cpp
-	$(NVCC) -x cu $(NVCFLAGS) components_gpu.cpp -c -o components_gpu.o $(IFLAGS)
+	$(CC) $(GPUCFLAGS) components_gpu.cpp -c -o components_gpu.o $(IFLAGS)
 
 repeat.exe: repeat.o
 	$(CC) $(CFLAGS) repeat.o -o repeat.exe $(IFLAGS)

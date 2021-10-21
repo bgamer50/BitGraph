@@ -13,7 +13,7 @@ class HasWithIndexStep : public TraversalStep {
         std::string key;
         boost::any value;
     public:
-        HasWithIndexStep(std::string k, boost::any v) : TraversalStep(FILTER, HAS_WITH_INDEX_STEP) {
+        HasWithIndexStep(std::string key, boost::any value) : TraversalStep(FILTER, HAS_WITH_INDEX_STEP) {
             this->key = key;
             this->value = value;
         }
