@@ -32,10 +32,10 @@ int32_t* to_gpu(TraverserSet& traversers) {
     for(size_t k = 0; k < sz; ++k) {
         boost::any e = traversers[k].get();
         if(typeid(Vertex*) == e.type()) {
-            trv[k] = static_cast<GPUReferenceVertex*>(boost::any_cast<Vertex*>(e))->gpu_vertex_id;
+            trv[k] = static_cast<GPUVertex*>(boost::any_cast<Vertex*>(e))->gpu_vertex_id;
         } else if(typeid(Edge*) == e.type()) {
             throw std::runtime_error("GPU Traversal over edges currently unsupported due to GPU identifier requirements.");
-            //trv[k] = static_cast<GPUReferenceEdge*>(boost::any_cast<Edge*>(e))->gpu_edge_id;
+            //trv[k] = static_cast<GPUEdge*>(boost::any_cast<Edge*>(e))->gpu_edge_id;
         } else {
             throw std::runtime_error("Type not supported for GPU traversal!");
         }

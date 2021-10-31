@@ -25,7 +25,7 @@ class GPUPropertyStep: public TraversalStep {
                 auto side_effects = trv.get_side_effects();
 
                 // Each traverser must be a Vertex
-                GPUReferenceVertex* v = static_cast<GPUReferenceVertex*>(boost::any_cast<Vertex*>(trv.get()));
+                GPUVertex* v = static_cast<GPUVertex*>(boost::any_cast<Vertex*>(trv.get()));
                 
                 // Access by GPU Vertex id
                 size_t& v_id_gpu = v->gpu_vertex_id;

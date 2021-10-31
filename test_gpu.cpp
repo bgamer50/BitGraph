@@ -46,7 +46,7 @@ int main(int charc, char* argv[]) {
                 Vertex* vtx = boost::any_cast<Vertex*>(v);
                 auto id = boost::any_cast<uint64_t>(vtx->id());
                 auto label = boost::any_cast<std::string>(vtx->label());
-                std::cout << "(" << id << ", " << label << ")" << std::endl;
+                std::cout << "out(" << id << ", " << label << ")" << std::endl;
                 
             });
 
@@ -55,6 +55,14 @@ int main(int charc, char* argv[]) {
                 auto id = boost::any_cast<uint64_t>(vtx->id());
                 auto label = boost::any_cast<std::string>(vtx->label());
                 std::cout << "in(" << id << ", " << label << ")" << std::endl;
+                
+            });
+
+            h->V()->both()->forEachRemaining([](boost::any& v){   
+                Vertex* vtx = boost::any_cast<Vertex*>(v);
+                auto id = boost::any_cast<uint64_t>(vtx->id());
+                auto label = boost::any_cast<std::string>(vtx->label());
+                std::cout << "both(" << id << ", " << label << ")" << std::endl;
                 
             });
 

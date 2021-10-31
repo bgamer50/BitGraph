@@ -86,38 +86,45 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
 
-    size_t degrees = std::stoi(std::string(argv[2]));
     try {
-        // CPU
         start = std::chrono::system_clock::now();
-        // do components
-        GraphTraversal* trv_cpu = g->V();
-        for(size_t k = 0; k < degrees; ++k) trv_cpu = trv_cpu->out();
-        trv_cpu->values(NAME)->iterate();
+        //g->V()->property("d", __->out()->count())->iterate();
         /*
-        forEachRemaining([](boost::any z){
-            std::cout << boost::any_cast<std::string>(z) << std::endl;
-        });
+        std::list<Vertex*> vertices = graph.vertices();
+        for(auto it = vertices.begin(); it != vertices.end(); ++it) {
+            Vertex* v = *it;
+            std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
+        }*/
+        h->V()->property("cc", __->id())->iterate();
+        h->V()->property("old_cc", __->values("cc"))->iterate();
+        /*
+        The old traversal
+        for(int k = 0; k < 1; ++k) {
+            g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+        }
         */
+        
+        h->V()->repeat(
+                __->property("old_cc", __->values("cc"))
+                ->property("cc", 
+                    __->coalesce({__->both()->values("cc")->min(C<uint64_t>::compare()), __->values("cc")})
+                )
+        )
+        ->until(
+            __->valueMap({"cc","old_cc"})->by(__->unfold())
+            ->where("cc", P::neq("old_cc"))
+            ->count()
+            ->is(0)
+        )
+        ->iterate();
+
         end = std::chrono::system_clock::now();
         elapsed = end-start;
-        std::cerr << "Out Time (CPU): " << elapsed.count() << " seconds." << std::endl;
-
-
-        // GPU
-        start = std::chrono::system_clock::now();
-        // do components
-        GraphTraversal* trv_gpu = h->V();
-        for(size_t k = 0; k < degrees; ++k) trv_gpu = trv_gpu->out();
-        trv_gpu->values(NAME)->iterate();
-        /*
-        forEachRemaining([](boost::any z){
-            std::cout << boost::any_cast<std::string>(z) << std::endl;
+        std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
+        h->V()->values("cc")->forEachRemaining([g](boost::any& v) {
+            int id = boost::any_cast<uint64_t>(v);
+            //std::cout << id << std::endl;
         });
-        */
-        end = std::chrono::system_clock::now();
-        elapsed = end-start;
-        std::cerr << "Out Time (GPU): " << elapsed.count() << " seconds." << std::endl;
     } catch(const std::exception& err) {
         std::cout << err.what() << std::endl;
         return -1;

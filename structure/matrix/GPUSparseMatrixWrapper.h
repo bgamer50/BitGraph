@@ -121,6 +121,74 @@ sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matr
 }
 
 /**
+    Computes the matrix C = A + B, where A, B, and C are all m x n matrices.
+    Adapted from the CUDA toolkit documentation (https://docs.nvidia.com/cuda/cusparse/index.html#csrgeam2)
+**/
+sparse_matrix_device_t add_csr_matrices(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix_A, sparse_matrix_device_t& device_matrix_B) {
+    const float alpha = 1;
+    const float beta = 1;
+
+    int baseC;
+    
+    size_t buffer_size_bytes;
+    char* buffer = nullptr;
+
+    cusparseSetPointerMode(handle, CUSPARSE_POINTER_MODE_HOST);
+    sparse_matrix_device_t device_matrix_C;
+    cudaMalloc((void**)&device_matrix_C.row_ptr, sizeof(int)*(device_matrix_A.num_rows+1));
+    int* nnzTotalDevHostPtr = &device_matrix_C.nnz;
+
+    cusparseMatDescr_t descriptor;
+    cusparseCreateMatDescr(&descriptor);
+    
+    /* prepare buffer */
+    cusparseScsrgeam2_bufferSizeExt(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
+        &alpha,
+        descriptor, device_matrix_A.nnz,
+        device_matrix_A.values, device_matrix_A.row_ptr, device_matrix_A.col_ptr,
+        &beta,
+        descriptor, device_matrix_B.nnz,
+        device_matrix_B.values, device_matrix_B.row_ptr, device_matrix_B.col_ptr,
+        descriptor,
+        device_matrix_C.values, device_matrix_C.row_ptr, device_matrix_C.col_ptr,
+        &buffer_size_bytes
+    );
+    cudaMalloc((void**)&buffer, sizeof(char) * buffer_size_bytes);
+
+    cusparseXcsrgeam2Nnz(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
+        descriptor, device_matrix_A.nnz, device_matrix_A.row_ptr, device_matrix_A.col_ptr,
+        descriptor, device_matrix_B.nnz, device_matrix_B.row_ptr, device_matrix_B.col_ptr,
+        descriptor, device_matrix_C.row_ptr, nnzTotalDevHostPtr,
+        buffer
+    );
+
+    if (nullptr != nnzTotalDevHostPtr) {
+        device_matrix_C.nnz = *nnzTotalDevHostPtr;
+    } else {
+        cudaMemcpy(&device_matrix_C.nnz, device_matrix_C.row_ptr + device_matrix_A.num_rows, sizeof(int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&baseC, device_matrix_C.row_ptr, sizeof(int), cudaMemcpyDeviceToHost);
+        device_matrix_C.nnz -= baseC;
+    }
+
+    cudaMalloc((void**)&device_matrix_C.col_ptr, sizeof(int) * device_matrix_C.nnz);
+    cudaMalloc((void**)&device_matrix_C.values, sizeof(float) * device_matrix_C.nnz);
+
+    cusparseScsrgeam2(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
+        &alpha,
+        descriptor, device_matrix_A.nnz,
+        device_matrix_A.values, device_matrix_A.row_ptr, device_matrix_A.col_ptr,
+        &beta,
+        descriptor, device_matrix_B.nnz,
+        device_matrix_B.values, device_matrix_B.row_ptr, device_matrix_B.col_ptr,
+        descriptor,
+        device_matrix_C.values, device_matrix_C.row_ptr, device_matrix_C.col_ptr,
+        buffer
+    );
+
+    return device_matrix_C;
+}
+
+/**
  * Converts a wrapped cusparse CSR matrix on the device to a CSR sparse matrix on the host. 
  **/
 sparse_matrix_t sparse_convert_device_to_host(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix);

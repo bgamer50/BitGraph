@@ -45,8 +45,15 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
             sparse_matrix_device_t temp_transposed_matrix = transpose_csr_matrix(gpu_graph->get_cusparse_handle(), adjacency_matrix);
             new_gpu_traversers = gpu_query_adjacency_v_to_v(temp_transposed_matrix, gpu_element_traversers, traversers.size());
             destroy_sparse_matrix(gpu_graph->get_cusparse_handle(), temp_transposed_matrix);
-        } else {
+        } else if(this->direction == OUT) {
             new_gpu_traversers = gpu_query_adjacency_v_to_v(adjacency_matrix, gpu_element_traversers, traversers.size());
+        } else { // BOTH
+            sparse_matrix_device_t temp_transposed_matrix = transpose_csr_matrix(gpu_graph->get_cusparse_handle(), adjacency_matrix);
+            sparse_matrix_device_t combined_matrix = add_csr_matrices(gpu_graph->get_cusparse_handle(), adjacency_matrix, temp_transposed_matrix);
+            destroy_sparse_matrix(gpu_graph->get_cusparse_handle(), temp_transposed_matrix);
+
+            new_gpu_traversers = gpu_query_adjacency_v_to_v(combined_matrix, gpu_element_traversers, traversers.size());
+            destroy_sparse_matrix(gpu_graph->get_cusparse_handle(), combined_matrix);
         }
         
         int32_t* traversed_vertices_device = std::get<0>(new_gpu_traversers);

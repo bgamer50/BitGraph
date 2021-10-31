@@ -1,10 +1,10 @@
 CC :=  /opt/clang+llvm-13.0.0-aarch64-linux-gnu/bin/clang++ 
-CFLAGS := -Ofast --std=c++17 -funsafe-math-optimizations -frename-registers
+CFLAGS := -Ofast --std=c++17 -funsafe-math-optimizations -frename-registers -funroll-loops -freroll-loops -frewrite-imports -frewrite-includes
 
 CUDAARCH := sm_53
 CUDALIB := /usr/local/cuda/lib64
 
-GPUCFLAGS := -Ofast --std=c++17 -xcuda --cuda-gpu-arch=$(CUDAARCH) -funsafe-math-optimizations -frename-registers
+GPUCFLAGS := -Ofast --std=c++17 -xcuda --cuda-gpu-arch=$(CUDAARCH) -funsafe-math-optimizations -frename-registers -funroll-loops -freroll-loops -frewrite-imports -frewrite-includes
 GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread
 
 IFLAGS := -I. -I../gremlin++/

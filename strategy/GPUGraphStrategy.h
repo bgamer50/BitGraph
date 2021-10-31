@@ -8,6 +8,7 @@
 #include "step/hybrid/GPUGraphStep.h"
 #include "step/gpu/GPUVertexStep.h"
 #include "step/hybrid/GPUPropertyStep.h"
+#include "step/hybrid/GPUAddPropertyStep.h"
 
 void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 	size_t skip_steps = 0;
@@ -51,12 +52,20 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 				*it = gpu_property_step;
 				break;
 			}
+
+			case ADD_PROPERTY_STEP: {
+				AddPropertyStep* add_property_step = static_cast<AddPropertyStep*>(current_step);
+				if(add_property_step->get_cardinality() != SINGLE) throw std::runtime_error("Property cardinality other than single not supported on GPU!");
+				GPUAddPropertyStep* gpu_add_property_step = new GPUAddPropertyStep(add_property_step->get_key(), add_property_step->get_value());
+				*it = gpu_add_property_step;
+				break;
+			}
 			
 			case HAS_STEP: {
 				HasStep* has_step = static_cast<HasStep*>(current_step);
 				has_step->set_acquirer([](GraphTraversalSource* src, Vertex* v, std::string& key){
 					GPUGraph* gpu_graph = static_cast<GPUGraph*>(src->getGraph());
-					GPUReferenceVertex* gpu_v = static_cast<GPUReferenceVertex*>(v);
+					GPUVertex* gpu_v = static_cast<GPUVertex*>(v);
 					return gpu_graph->get_property(key, gpu_v->gpu_vertex_id);
 				});
 				break;
