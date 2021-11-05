@@ -31,7 +31,7 @@ sparse_matrix_device_t sparse_convert_host_to_device(cusparseHandle_t handle, sp
     device_matrix.num_cols = host_matrix.num_cols;
 
     cudaMalloc((void **) &device_matrix.row_ptr, sizeof(int32_t) * host_matrix.row_ptr.size());
-    cudaMemcpy(device_matrix.row_ptr, host_matrix.row_ptr.data(), sizeof(int32_t) * host_matrix.row_ptr.size(), cudaMemcpyHostToDevice);
+    cudaMemcpy(device_matrix.row_ptr, host_matrix.row_ptr.data(), sizeof(int32_t) * (host_matrix.num_rows + 1), cudaMemcpyHostToDevice);
 
     cudaMalloc((void **) &device_matrix.col_ptr, sizeof(int32_t) * host_matrix.nnz);
     cudaMemcpy(device_matrix.col_ptr, host_matrix.col_ptr.data(), sizeof(int32_t) * host_matrix.nnz, cudaMemcpyHostToDevice);
@@ -117,6 +117,23 @@ sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matr
     if(status_convert != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error transposing device matrix (convert csr to csc):\n" + std::string(cusparseGetErrorString(status_convert)));
 
     cudaFree(buffer);
+
+    cusparseStatus_t status_descr = cusparseCreateCsr(
+                                                &gpu_csc_matrix.descriptor, 
+                                                gpu_csc_matrix.num_rows,
+                                                gpu_csc_matrix.num_cols,
+                                                gpu_csc_matrix.nnz, 
+                                                gpu_csc_matrix.row_ptr, 
+                                                gpu_csc_matrix.col_ptr, 
+                                                gpu_csc_matrix.values, 
+                                                CUSPARSE_INDEX_32I,
+                                                CUSPARSE_INDEX_32I, 
+                                                CUSPARSE_INDEX_BASE_ZERO, 
+                                                CUDA_R_32F
+                                                );
+
+    if(status_descr != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error getting descriptor for transposed matrix:\n" + std::string(cusparseGetErrorString(status_descr)));
+
     return gpu_csc_matrix;
 }
 
@@ -125,65 +142,106 @@ sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matr
     Adapted from the CUDA toolkit documentation (https://docs.nvidia.com/cuda/cusparse/index.html#csrgeam2)
 **/
 sparse_matrix_device_t add_csr_matrices(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix_A, sparse_matrix_device_t& device_matrix_B) {
-    const float alpha = 1;
-    const float beta = 1;
+    float alpha = 1;
+    float beta = 1;
 
-    int baseC;
+    int baseC  = 0;
+    int nnzC = 0;
     
-    size_t buffer_size_bytes;
-    char* buffer = nullptr;
+    size_t buffer_size_bytes = 0;
 
+    cusparsePointerMode_t orig_pointer_mode;
+    cusparseGetPointerMode(handle, &orig_pointer_mode);
     cusparseSetPointerMode(handle, CUSPARSE_POINTER_MODE_HOST);
+
     sparse_matrix_device_t device_matrix_C;
-    cudaMalloc((void**)&device_matrix_C.row_ptr, sizeof(int)*(device_matrix_A.num_rows+1));
-    int* nnzTotalDevHostPtr = &device_matrix_C.nnz;
+    cudaMalloc((void**) &device_matrix_C.row_ptr, sizeof(int32_t) * (device_matrix_A.num_rows + 1));
+    device_matrix_C.col_ptr = nullptr;
+    device_matrix_C.values = nullptr;
+    device_matrix_C.num_rows = device_matrix_A.num_rows;
+    device_matrix_C.num_cols = device_matrix_A.num_cols;
+    device_matrix_C.nnz = 0;
+
+    int* nnzTotalDevHostPtr = &nnzC;
 
     cusparseMatDescr_t descriptor;
     cusparseCreateMatDescr(&descriptor);
+
+    int32_t* B_row_ptr;
+    cudaMalloc((void**) &B_row_ptr, sizeof(int32_t) * (device_matrix_B.num_rows + 1));
+    cudaMemcpy((void**) &B_row_ptr, &device_matrix_B.row_ptr, sizeof(int32_t) * (device_matrix_B.num_rows + 1), cudaMemcpyDeviceToDevice);
+    int32_t* B_col_ptr;
+    cudaMalloc((void**) &B_col_ptr, sizeof(int32_t) * (device_matrix_B.nnz));
+    cudaMemcpy((void**) &B_col_ptr, &device_matrix_B.col_ptr, sizeof(int32_t) * device_matrix_B.nnz, cudaMemcpyDeviceToDevice);
+    float* B_values;
+    cudaMalloc((void**) &B_values, sizeof(float) * (device_matrix_B.nnz));
+    cudaMemcpy((void**) &B_values, &device_matrix_B.values, sizeof(float) * device_matrix_B.nnz, cudaMemcpyDeviceToDevice);
     
     /* prepare buffer */
-    cusparseScsrgeam2_bufferSizeExt(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
+    cusparseStatus_t status_buffer = cusparseScsrgeam2_bufferSizeExt(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
         &alpha,
         descriptor, device_matrix_A.nnz,
         device_matrix_A.values, device_matrix_A.row_ptr, device_matrix_A.col_ptr,
         &beta,
         descriptor, device_matrix_B.nnz,
-        device_matrix_B.values, device_matrix_B.row_ptr, device_matrix_B.col_ptr,
+        B_values, B_row_ptr, B_col_ptr,
         descriptor,
         device_matrix_C.values, device_matrix_C.row_ptr, device_matrix_C.col_ptr,
         &buffer_size_bytes
     );
-    cudaMalloc((void**)&buffer, sizeof(char) * buffer_size_bytes);
+    cudaDeviceSynchronize();
+    if(status_buffer != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error adding device matrices (calculate buffsize):\n" + std::string(cusparseGetErrorString(status_buffer)));
+    void* buffer;
+    cudaMalloc(&buffer, buffer_size_bytes);
 
-    cusparseXcsrgeam2Nnz(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
+    /*
+    std::vector<float> blargh(device_matrix_B.nnz);
+    cudaMemcpy(blargh.data(), device_matrix_B.values, sizeof(float) * blargh.size(), cudaMemcpyDeviceToHost);
+    for(int32_t i : blargh) std::cout << i << ", ";
+    std::cout << std::endl;
+    */
+
+    cusparseStatus_t status_nnz = cusparseXcsrgeam2Nnz(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
         descriptor, device_matrix_A.nnz, device_matrix_A.row_ptr, device_matrix_A.col_ptr,
-        descriptor, device_matrix_B.nnz, device_matrix_B.row_ptr, device_matrix_B.col_ptr,
+        descriptor, device_matrix_B.nnz, B_row_ptr, B_col_ptr,
         descriptor, device_matrix_C.row_ptr, nnzTotalDevHostPtr,
         buffer
     );
+    cudaDeviceSynchronize();
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess) {
+        // print the CUDA error message and exit
+        std::cout << "CUDA error: " << cudaGetErrorString(error) << std::endl;
+    }
+    if(status_nnz != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error adding device matrices (calculate nnz):\n" + std::string(cusparseGetErrorString(status_nnz)));
 
     if (nullptr != nnzTotalDevHostPtr) {
         device_matrix_C.nnz = *nnzTotalDevHostPtr;
     } else {
-        cudaMemcpy(&device_matrix_C.nnz, device_matrix_C.row_ptr + device_matrix_A.num_rows, sizeof(int), cudaMemcpyDeviceToHost);
-        cudaMemcpy(&baseC, device_matrix_C.row_ptr, sizeof(int), cudaMemcpyDeviceToHost);
-        device_matrix_C.nnz -= baseC;
+        cudaMemcpy(&device_matrix_C.nnz, device_matrix_C.row_ptr + device_matrix_A.num_rows, sizeof(int32_t), cudaMemcpyDeviceToHost);
+        cudaMemcpy(&baseC, device_matrix_C.row_ptr, sizeof(int32_t), cudaMemcpyDeviceToHost);
+        device_matrix_C.nnz = nnzC - baseC;
     }
 
-    cudaMalloc((void**)&device_matrix_C.col_ptr, sizeof(int) * device_matrix_C.nnz);
+    cudaMalloc((void**)&device_matrix_C.col_ptr, sizeof(int32_t) * device_matrix_C.nnz);
     cudaMalloc((void**)&device_matrix_C.values, sizeof(float) * device_matrix_C.nnz);
 
-    cusparseScsrgeam2(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
+    cusparseStatus_t status_add = cusparseScsrgeam2(handle, device_matrix_A.num_rows, device_matrix_A.num_cols,
         &alpha,
         descriptor, device_matrix_A.nnz,
         device_matrix_A.values, device_matrix_A.row_ptr, device_matrix_A.col_ptr,
         &beta,
         descriptor, device_matrix_B.nnz,
-        device_matrix_B.values, device_matrix_B.row_ptr, device_matrix_B.col_ptr,
+        B_values, B_row_ptr, B_col_ptr,
         descriptor,
         device_matrix_C.values, device_matrix_C.row_ptr, device_matrix_C.col_ptr,
         buffer
     );
+    cudaDeviceSynchronize();
+    if(status_add != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error adding device matrices (execute addition):\n" + std::string(cusparseGetErrorString(status_add)));
+
+    cusparseSetPointerMode(handle, orig_pointer_mode);
+    cudaFree(buffer);
 
     return device_matrix_C;
 }

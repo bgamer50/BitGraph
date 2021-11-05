@@ -18,6 +18,15 @@ void prefix_sum(int32_t** A_ptr, int N);
 std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N);
 std::pair<std::pair<int32_t*, int32_t*>, int32_t*> gpu_query_adjacency_v_to_e(sparse_matrix_device_t& M, int32_t* gpu_element_traversers);
 
+void cudaCheckErrors(std::string func_name) {
+    cudaError_t error = cudaGetLastError();
+    if(error != cudaSuccess) {
+        // print the CUDA error message and exit
+        printf("CUDA error calling %s:\n%s\n\n", func_name.c_str(), cudaGetErrorString(error));
+        exit(EXIT_FAILURE);
+    }
+}
+
 /**
     Copy data from a traversal over graph elements (Vertex,Edge)
     to the GPU.
@@ -59,12 +68,7 @@ std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix
     cudaMalloc((void**) &result, sizeof(int32_t) * N);
     k_quadvv_get_mem<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(M.row_ptr, gpu_element_traversers, result, N);
     cudaDeviceSynchronize();
-    cudaError_t error = cudaGetLastError();
-    if(error != cudaSuccess) {
-        // print the CUDA error message and exit
-        printf("CUDA error: %s\n", cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
+    cudaCheckErrors("k_quadvv_get_mem");
 
     prefix_sum(&result, N); // result now holds the prefix sums.
 
@@ -74,10 +78,12 @@ std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix
     
     cudaMalloc((void**) &output, sizeof(int32_t) * N_prime);
     cudaMalloc((void**) &output_origin, sizeof(int32_t) * N_prime);
+    cudaDeviceSynchronize();
 
     // Then we run a kernel that actually spits out the column #s (a.k.a. adjacent vertices in the out-direction, or in-direction if this matrix has been transposed)
     k_quadvv_get_adj<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(M.row_ptr, M.col_ptr, gpu_element_traversers, result, output, output_origin, N);
     cudaDeviceSynchronize();
+    cudaCheckErrors("k_quadvv_get_adj");
     
     return std::make_tuple(output, output_origin, N_prime);
 }
@@ -138,8 +144,9 @@ void prefix_sum(int32_t** A_ptr, int N) {
     
     for(int i = 1; i < N; i *= 2) {
         k_prefix_sum<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(A, temp, i, N);
-        std::swap(A, temp);
         cudaDeviceSynchronize();
+        cudaCheckErrors("k_prefix_sum");
+        std::swap(A, temp);
     }
 
     cudaFree(temp);
