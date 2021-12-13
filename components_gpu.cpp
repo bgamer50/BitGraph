@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
     cudaSetDevice(0);
     GPUGraph gpu_graph(graph);
     std::cout << "gpu graph created!" << std::endl;
-    auto h = g;//gpu_graph.traversal();
+    auto h = gpu_graph.traversal();
 
     /*
     try {
@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
         h->V()->repeat(
                 __->property("old_cc", __->values("cc"))
                 ->property("cc", 
-                    __->coalesce({__->both()->values("cc"), __->values("cc")})->min(C<uint64_t>::compare())
+                    __->coalesce({__->out()->values("cc"), __->values("cc")})->min(C<uint64_t>::compare())
                 )
         )
         ->until(
@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
 
         end = std::chrono::system_clock::now();
         elapsed = end-start;
-        std::cerr << "CC 1x time: " << elapsed.count() << " seconds." << std::endl;
+        std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
         std::unordered_set<int> comp_set;
         h->V()->values("cc")->forEachRemaining([g,&comp_set](boost::any& v) {
             int id = boost::any_cast<uint64_t>(v);
