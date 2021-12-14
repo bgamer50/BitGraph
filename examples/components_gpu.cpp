@@ -65,14 +65,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto h = g;
-    if(processor == "gpu") { 
-        std::cout << "creating gpu graph!" << std::endl;
-        cudaSetDevice(0);
-        GPUGraph gpu_graph(graph);
-        std::cout << "gpu graph created!" << std::endl;
-        h = gpu_graph.traversal();
-    }
+    std::cout << "creating gpu graph!" << std::endl;
+    cudaSetDevice(0);
+    GPUGraph gpu_graph(graph);
+    std::cout << "gpu graph created!" << std::endl;
+    auto h = processor == "gpu" ? gpu_graph.traversal() : g;
 
     auto end = std::chrono::system_clock::now();
 
