@@ -9,41 +9,41 @@ GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread
 
 IFLAGS := -I. -I../gremlin++/
 
-test_gpu.exe: test_gpu.o
-	$(CC) $(CFLAGS) test_gpu.o -o test_gpu.exe $(GPULFLAGS)
+bin/test_gpu.exe: bin/test_gpu.o
+	$(CC) $(CFLAGS) bin/test_gpu.o -o bin/test_gpu.exe $(GPULFLAGS)
 
-test_gpu.o: test_gpu.cpp
-	$(CC) $(GPUCFLAGS) test_gpu.cpp -c -o test_gpu.o $(IFLAGS)
+bin/test_gpu.o: examples/test_gpu.cpp
+	$(CC) $(GPUCFLAGS) examples/test_gpu.cpp -c -o bin/test_gpu.o $(IFLAGS)
 
-lca.exe: lca.o
-	$(CC) $(CFLAGS) lca.o -o lca.exe $(GPULFLAGS)
+bin/lca.exe: bin/lca.o
+	$(CC) $(CFLAGS) bin/lca.o -o bin/lca.exe $(GPULFLAGS)
 
-lca.o: lca.cpp
-	$(CC) $(GPUCFLAGS) lca.cpp -c -o lca.o $(IFLAGS)
+bin/lca.o: examples/lca.cpp
+	$(CC) $(GPUCFLAGS) examples/lca.cpp -c -o bin/lca.o $(IFLAGS)
 
-valuemap.exe: valuemap.o
-	$(CC) $(CFLAGS) valuemap.o -o valuemap.exe $(IFLAGS)
+bin/valuemap.exe: bin/valuemap.o
+	$(CC) $(CFLAGS) bin/valuemap.o -o bin/valuemap.exe $(IFLAGS)
 
-valuemap.o: valuemap.cpp
-	$(CC) $(CFLAGS) valuemap.cpp -c -o valuemap.o $(IFLAGS)
+bin/valuemap.o: examples/valuemap.cpp
+	$(CC) $(CFLAGS) examples/valuemap.cpp -c -o bin/valuemap.o $(IFLAGS)
 
-components.exe: components.o
-	$(CC) $(CFLAGS) components.o -o components.exe $(IFLAGS)
+bin/components.exe: bin/components.o
+	$(CC) $(CFLAGS) bin/components.o -o bin/components.exe $(IFLAGS)
 
-components.o: components.cpp
-	$(CC) $(CFLAGS) components.cpp -c -o components.o $(IFLAGS)
+bin/components.o: examples/components.cpp
+	$(CC) $(CFLAGS) examples/components.cpp -c -o bin/components.o $(IFLAGS)
 
-components_gpu.exe: components_gpu.o
-	$(CC) $(CFLAGS) components_gpu.o -o components_gpu.exe $(GPULFLAGS)
+bin/components_gpu.exe: bin/components_gpu.o
+	$(CC) $(CFLAGS) bin/components_gpu.o -o bin/components_gpu.exe $(GPULFLAGS)
 
-components_gpu.o: components_gpu.cpp
-	$(CC) $(GPUCFLAGS) components_gpu.cpp -c -o components_gpu.o $(IFLAGS)
+bin/components_gpu.o: examples/components_gpu.cpp
+	$(CC) $(GPUCFLAGS) examples/components_gpu.cpp -c -o bin/components_gpu.o $(IFLAGS)
 
-repeat.exe: repeat.o
-	$(CC) $(CFLAGS) repeat.o -o repeat.exe $(IFLAGS)
+bin/repeat.exe: bin/repeat.o
+	$(CC) $(CFLAGS) bin/repeat.o -o bin/repeat.exe $(IFLAGS)
 
-repeat.o: repeat.cpp
-	$(CC) $(CFLAGS) repeat.cpp -c -o repeat.o $(IFLAGS)
+bin/repeat.o: examples/repeat.cpp
+	$(CC) $(CFLAGS) examples/repeat.cpp -c -o bin/repeat.o $(IFLAGS)
 
 clean:
-	rm -rf *.o *.dylib *.lib *.so *.exe
+	rm -rf bin/*

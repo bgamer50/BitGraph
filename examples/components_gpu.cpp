@@ -27,7 +27,8 @@ int main(int argc, char* argv[]) {
         });
     GraphTraversalSource* g = graph.traversal();
 
-    std::string filename = std::string(argv[1]);
+    std::string filename = argv[1];
+    std::string processor = argv[2];
     FILE* f = fopen(filename.c_str(), "r");
 
     char id1[10];
@@ -64,22 +65,14 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    std::cout << "creating gpu graph!" << std::endl;
-    cudaSetDevice(0);
-    GPUGraph gpu_graph(graph);
-    std::cout << "gpu graph created!" << std::endl;
-    auto h = gpu_graph.traversal();
-
-    /*
-    try {
-        h->V()->id()->forEachRemaining([](boost::any& cnt){
-            std::cout << boost::any_cast<uint64_t>(cnt) << std::endl;
-        });
-    } catch(const std::exception& err) {
-        std::cout << err.what() << std::endl;
-        return -1;
+    auto h = g;
+    if(processor == "gpu") { 
+        std::cout << "creating gpu graph!" << std::endl;
+        cudaSetDevice(0);
+        GPUGraph gpu_graph(graph);
+        std::cout << "gpu graph created!" << std::endl;
+        h = gpu_graph.traversal();
     }
-    */
 
     auto end = std::chrono::system_clock::now();
 
@@ -88,26 +81,14 @@ int main(int argc, char* argv[]) {
 
     try {
         start = std::chrono::system_clock::now();
-        //g->V()->property("d", __->out()->count())->iterate();
-        /*
-        std::list<Vertex*> vertices = graph.vertices();
-        for(auto it = vertices.begin(); it != vertices.end(); ++it) {
-            Vertex* v = *it;
-            std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
-        }*/
+
         h->V()->property("cc", __->id())->iterate();
         h->V()->property("old_cc", __->values("cc"))->iterate();
-        /*
-        The old traversal
-        for(int k = 0; k < 1; ++k) {
-            g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
-        }
-        */
         
         h->V()->repeat(
                 __->property("old_cc", __->values("cc"))
                 ->property("cc", 
-                    __->coalesce({__->out()->values("cc"), __->values("cc")})->min(C<uint64_t>::compare())
+                    __->coalesce({__->both()->values("cc"), __->values("cc")})->min(C<uint64_t>::compare())
                 )
         )
         ->until(
