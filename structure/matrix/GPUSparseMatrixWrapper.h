@@ -8,6 +8,7 @@
 #include <cusparse.h>
 
 #include "structure/matrix/CPUSparseMatrix.h"
+#include "util/cuda_utils.h"
 
 typedef struct sparse_matrix_device {
     int32_t nnz; // number of nonzero elements
@@ -52,7 +53,7 @@ sparse_matrix_device_t sparse_convert_host_to_device(cusparseHandle_t handle, sp
                                                 CUSPARSE_INDEX_BASE_ZERO, 
                                                 CUDA_R_32F
                                                 );
-
+    cudaDeviceSynchronize();
     if(status != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error converting host matrix to device matrix:\n" + std::string(cusparseGetErrorString(status)));
 
     return device_matrix;
@@ -62,94 +63,112 @@ sparse_matrix_device_t sparse_convert_host_to_device(cusparseHandle_t handle, sp
  * Transposes a CSR matrix on the device.
 **/
 sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix) {
-    sparse_matrix_device_t gpu_csc_matrix;
-    gpu_csc_matrix.nnz = device_matrix.nnz;
-    gpu_csc_matrix.num_rows = device_matrix.num_cols;
-    gpu_csc_matrix.num_cols = device_matrix.num_rows;
+    int32_t* coo_row_ptr;
+    cudaMalloc(&coo_row_ptr, sizeof(int32_t) * device_matrix.nnz);
 
-    cudaMalloc((void **) &gpu_csc_matrix.row_ptr, sizeof(int32_t) * (gpu_csc_matrix.num_rows + 1));
-    cudaError_t error = cudaGetLastError();
-    if(error != cudaSuccess) {
-        // print the CUDA error message and exit
-        std::cout << "CUDA error: " << cudaGetErrorString(error) << std::endl;
-    }
-    cudaMalloc((void **) &gpu_csc_matrix.col_ptr, sizeof(int32_t) * gpu_csc_matrix.nnz);
-    error = cudaGetLastError();
-    if(error != cudaSuccess) {
-        // print the CUDA error message and exit
-        std::cout << "CUDA error: " << cudaGetErrorString(error) << std::endl;
-    }
-    cudaMalloc((void **) &gpu_csc_matrix.values, sizeof(float) * gpu_csc_matrix.nnz);
-    error = cudaGetLastError();
-    if(error != cudaSuccess) {
-        // print the CUDA error message and exit
-        std::cout << "CUDA error: " << cudaGetErrorString(error) << std::endl;
-    }
+    int32_t* transpose_row_ptr;
+    cudaMalloc(&transpose_row_ptr, sizeof(int32_t) * (device_matrix.num_rows + 1));
 
-    // Convert the CSR matrix to CSC.  In this format, it is identical to the transpose of the CSR.
-    size_t bufsize;
-    cusparseStatus_t status_bufsize = cusparseCsr2cscEx2_bufferSize(
+    int32_t* copy_col_ptr;
+    cudaMalloc(&copy_col_ptr, sizeof(int32_t) * device_matrix.nnz);
+    cudaMemcpy(copy_col_ptr, device_matrix.col_ptr, sizeof(int32_t) * device_matrix.nnz, cudaMemcpyDeviceToDevice);
+
+    float* transpose_values;
+    cudaMalloc(&transpose_values, sizeof(float) * device_matrix.nnz);
+
+    cudaDeviceSynchronize();
+    cudaCheckErrors("malloc coo_row_ptr, transpose_row_ptr, copy_col_ptr, transpose_values");
+
+    cusparseStatus_t status = cusparseXcsr2coo(
         handle,
-        device_matrix.num_rows,
-        device_matrix.num_cols,
-        device_matrix.nnz,
-        device_matrix.values,
         device_matrix.row_ptr,
-        device_matrix.col_ptr,
-        gpu_csc_matrix.values,
-        gpu_csc_matrix.row_ptr,
-        gpu_csc_matrix.col_ptr,
-        CUDA_R_32F,
-        CUSPARSE_ACTION_NUMERIC,
-        CUSPARSE_INDEX_BASE_ZERO,
-        CUSPARSE_CSR2CSC_ALG1,
-        &bufsize
+        device_matrix.nnz,
+        device_matrix.num_rows,
+        coo_row_ptr,
+        CUSPARSE_INDEX_BASE_ZERO
     );
     cudaDeviceSynchronize();
-    if(status_bufsize != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error transposing device matrix (create buffer):\n" + std::string(cusparseGetErrorString(status_bufsize)));
+    if(status != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error converting to coo:\n" + std::string(cusparseGetErrorString(status)));
 
-    void* buffer = nullptr;
-    cudaMalloc(&buffer, bufsize);
-
-    cusparseStatus_t status_convert = cusparseCsr2cscEx2(
+    size_t buffsize;
+    status = cusparseXcoosort_bufferSizeExt(
         handle,
-        device_matrix.num_rows,
         device_matrix.num_cols,
+        device_matrix.num_rows,
         device_matrix.nnz,
-        device_matrix.values,
-        device_matrix.row_ptr,
-        device_matrix.col_ptr,
-        gpu_csc_matrix.values,
-        gpu_csc_matrix.row_ptr,
-        gpu_csc_matrix.col_ptr,
-        CUDA_R_32F,
-        CUSPARSE_ACTION_NUMERIC,
-        CUSPARSE_INDEX_BASE_ZERO,
-        CUSPARSE_CSR2CSC_ALG1,
+        copy_col_ptr,
+        coo_row_ptr,
+        &buffsize
+    );
+    cudaDeviceSynchronize();
+    if(status != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error getting sort buffer size:\n" + std::string(cusparseGetErrorString(status)));
+
+    void* buffer;
+    cudaMalloc(&buffer, buffsize);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("malloc sort buffer");
+
+    int32_t* permutation;
+    cudaMalloc(&permutation, sizeof(float) * device_matrix.nnz);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("malloc permutation");
+
+    status = cusparseCreateIdentityPermutation(
+        handle,
+        device_matrix.nnz,
+        permutation
+    );
+    cudaDeviceSynchronize();
+    if(status != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error creating permutation:\n" + std::string(cusparseGetErrorString(status)));
+
+    status = cusparseXcoosortByRow(
+        handle,
+        device_matrix.num_cols,
+        device_matrix.num_rows,
+        device_matrix.nnz,
+        copy_col_ptr,
+        coo_row_ptr,
+        permutation,
         buffer
     );
-    if(status_convert != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error transposing device matrix (convert csr to csc):\n" + std::string(cusparseGetErrorString(status_convert)));
-
-    cudaFree(buffer);
-
-    cusparseStatus_t status_descr = cusparseCreateCsr(
-                                                &gpu_csc_matrix.descriptor, 
-                                                gpu_csc_matrix.num_rows,
-                                                gpu_csc_matrix.num_cols,
-                                                gpu_csc_matrix.nnz, 
-                                                gpu_csc_matrix.row_ptr, 
-                                                gpu_csc_matrix.col_ptr, 
-                                                gpu_csc_matrix.values, 
-                                                CUSPARSE_INDEX_32I,
-                                                CUSPARSE_INDEX_32I, 
-                                                CUSPARSE_INDEX_BASE_ZERO, 
-                                                CUDA_R_32F
-                                                );
-
-    if(status_descr != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error getting descriptor for transposed matrix:\n" + std::string(cusparseGetErrorString(status_descr)));
-
     cudaDeviceSynchronize();
-    return gpu_csc_matrix;
+    if(status != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error sorting coo:\n" + std::string(cusparseGetErrorString(status)));
+
+    status = cusparseSgthr(
+        handle, 
+        device_matrix.nnz, 
+        device_matrix.values, 
+        transpose_values, 
+        permutation, 
+        CUSPARSE_INDEX_BASE_ZERO
+    ); 
+
+    status = cusparseXcoo2csr(
+        handle,
+        copy_col_ptr,
+        device_matrix.nnz,
+        device_matrix.num_rows,
+        transpose_row_ptr,
+        CUSPARSE_INDEX_BASE_ZERO
+    );
+    cudaDeviceSynchronize();
+    if(status != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error converting to csr:\n" + std::string(cusparseGetErrorString(status)));
+
+    sparse_matrix_device_t transpose_matrix;
+    transpose_matrix.row_ptr = transpose_row_ptr;
+    transpose_matrix.col_ptr = coo_row_ptr;
+    transpose_matrix.values = transpose_values;
+    transpose_matrix.num_rows = device_matrix.num_cols;
+    transpose_matrix.num_cols = device_matrix.num_rows;
+    transpose_matrix.nnz = device_matrix.nnz;
+
+    cudaFree(copy_col_ptr);
+    cudaFree(permutation);
+    cudaFree(buffer);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("freeing memory");
+    
+    return transpose_matrix;
 }
 
 /**

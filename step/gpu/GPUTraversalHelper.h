@@ -8,6 +8,7 @@
 #include "traversal/Traverser.h"
 #include "structure/GPUVertex.h"
 #include "structure/GPUEdge.h"
+#include "util/cuda_utils.h"
 
 #include <cuda_runtime.h>
 
@@ -19,15 +20,6 @@ int32_t* to_gpu(TraverserSet& traversers);
 void prefix_sum(int32_t** A_ptr, int N);
 std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N);
 std::pair<std::pair<int32_t*, int32_t*>, int32_t*> gpu_query_adjacency_v_to_e(sparse_matrix_device_t& M, int32_t* gpu_element_traversers);
-
-void cudaCheckErrors(std::string func_name) {
-    cudaError_t error = cudaGetLastError();
-    if(error != cudaSuccess) {
-        // print the CUDA error message and exit
-        printf("CUDA error calling %s:\n%s\n\n", func_name.c_str(), cudaGetErrorString(error));
-        exit(EXIT_FAILURE);
-    }
-}
 
 /**
     Copy data from a traversal over graph elements (Vertex,Edge)
