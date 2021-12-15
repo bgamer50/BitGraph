@@ -64,10 +64,12 @@ std::unordered_map<std::string, boost::any> ConnectedComponentsGPUGraphAlgorithm
         cudaCheckErrors("k_sub");
 
         prefix_sum(&old_cc, adjacency_matrix.num_rows);
+
         cudaMemcpy(&diff, old_cc+(adjacency_matrix.num_rows-1), sizeof(int32_t) * 1, cudaMemcpyDeviceToHost);
         cudaDeviceSynchronize();
         cudaCheckErrors("get diff");
         std::swap(old_cc, new_cc);
+        std::cout << "diff: " << diff << std::endl;
     }
 
     std::vector<int32_t> cc(adjacency_matrix.num_rows);
@@ -89,14 +91,14 @@ std::unordered_map<std::string, boost::any> ConnectedComponentsGPUGraphAlgorithm
 }
 
 /*
-    Subtracts device array B from device array A (A = A - B)
+    Computes A = (A ?= B)
 */
 __global__ void k_sub(int N, int32_t* A, int32_t* B) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
 
     for(int i = index; i < N; i += stride) {
-        A[i] -= B[i];
+        A[i] = A[i] != B[i];
     }
 }
 
