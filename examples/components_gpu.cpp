@@ -82,20 +82,21 @@ int main(int argc, char* argv[]) {
         h->V()->property("cc", __->id())->iterate();
         h->V()->property("old_cc", __->values("cc"))->iterate();
         
-        h->V()->repeat(
-                __->property("old_cc", __->values("cc"))
+        size_t diff = 1;
+        while(diff > 0) {
+            diff = boost::any_cast<size_t>(
+                h->V()
+                ->property("old_cc", __->values("cc"))
                 ->property("cc", 
-                    __->coalesce({__->both()->values("cc"), __->values("cc")})->min(C<uint64_t>::compare())
+                    __->_union({__->both()->values("old_cc"), __->values("old_cc")})->min(C<uint64_t>::compare())
                 )
-        )
-        ->until(
-            __->valueMap({"cc","old_cc"})->by(__->unfold())
-            ->where("cc", P::neq("old_cc"))
-            ->count()
-            ->is(0)
-        )
-        ->iterate();
-
+                ->valueMap({"cc","old_cc"})->by(__->unfold())
+                ->where("cc", P::neq("old_cc"))
+                ->count()
+                ->next()
+            );
+            std::cout << "diff: " << diff << std::endl;
+        }
         end = std::chrono::system_clock::now();
         elapsed = end-start;
         std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
@@ -106,6 +107,16 @@ int main(int argc, char* argv[]) {
             //std::cout << id << std::endl;
         });
         std::cout << comp_set.size() << " components!" << std::endl;
+
+        start = std::chrono::system_clock::now();
+        auto* algo = (new ConnectedComponentsGPUGraphAlgorithm())->option(ConnectedComponentsGPUGraphAlgorithm::OPTION_DIRECTION, BOTH);
+        auto algo_result = gpu_graph.algorithm(algo);
+        end = std::chrono::system_clock::now();
+        elapsed = end - start;
+        std::cerr << "CCalgo time: " << elapsed.count() << " seconds." << std::endl;
+        std::cout << boost::any_cast<std::unordered_map<std::string, std::vector<uint64_t>>>(algo_result[ConnectedComponentsGPUGraphAlgorithm::OUTPUT_COMPONENTS]).size() << " components." << std::endl;
+        delete algo;
+
     } catch(const std::exception& err) {
         std::cout << err.what() << std::endl;
         return -1;

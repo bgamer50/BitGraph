@@ -6,6 +6,8 @@
 
 #include <inttypes.h>
 #include "traversal/Traverser.h"
+#include "structure/GPUVertex.h"
+#include "structure/GPUEdge.h"
 
 #include <cuda_runtime.h>
 

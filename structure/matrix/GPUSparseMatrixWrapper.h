@@ -64,8 +64,8 @@ sparse_matrix_device_t sparse_convert_host_to_device(cusparseHandle_t handle, sp
 sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matrix_device_t& device_matrix) {
     sparse_matrix_device_t gpu_csc_matrix;
     gpu_csc_matrix.nnz = device_matrix.nnz;
-    gpu_csc_matrix.num_rows = device_matrix.num_rows;
-    gpu_csc_matrix.num_cols = device_matrix.num_cols;
+    gpu_csc_matrix.num_rows = device_matrix.num_cols;
+    gpu_csc_matrix.num_cols = device_matrix.num_rows;
 
     cudaMalloc((void **) &gpu_csc_matrix.row_ptr, sizeof(int32_t) * (gpu_csc_matrix.num_rows + 1));
     cudaError_t error = cudaGetLastError();
@@ -108,7 +108,7 @@ sparse_matrix_device_t transpose_csr_matrix(cusparseHandle_t handle, sparse_matr
     cudaDeviceSynchronize();
     if(status_bufsize != CUSPARSE_STATUS_SUCCESS) throw std::runtime_error("error transposing device matrix (create buffer):\n" + std::string(cusparseGetErrorString(status_bufsize)));
 
-    void* buffer;
+    void* buffer = nullptr;
     cudaMalloc(&buffer, bufsize);
 
     cusparseStatus_t status_convert = cusparseCsr2cscEx2(
