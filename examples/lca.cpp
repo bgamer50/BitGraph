@@ -40,7 +40,6 @@ int main(int charc, char* argv[]) {
     g = gpu_graph.traversal();
 
     try {
-        
         boost::any lca = 
             g->V()->has(NAME, "A")->
                 repeat(__->out())->emit()->as("x")->

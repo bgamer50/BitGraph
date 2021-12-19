@@ -21,6 +21,13 @@ void prefix_sum(int32_t** A_ptr, int N);
 std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N);
 std::pair<std::pair<int32_t*, int32_t*>, int32_t*> gpu_query_adjacency_v_to_e(sparse_matrix_device_t& M, int32_t* gpu_element_traversers);
 
+typedef struct gpu_traverser_info {
+    int32_t* traversers;
+    size_t num_traversers;
+    TraverserSet original_traversers;
+    std::vector<std::pair<int32_t*, size_t>> paths;
+} gpu_traverser_info_t;
+
 /**
     Copy data from a traversal over graph elements (Vertex,Edge)
     to the GPU.
@@ -30,6 +37,8 @@ int32_t* to_gpu(TraverserSet& traversers) {
 
     int32_t* gpu_traversers;
     cudaMalloc((void**) &gpu_traversers, sizeof(int32_t) * sz);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("allocate traversers");
 
     std::vector<int32_t> trv(sz); 
     for(size_t k = 0; k < sz; ++k) {
@@ -44,7 +53,9 @@ int32_t* to_gpu(TraverserSet& traversers) {
         }
     } 
     
-    cudaMemcpy(gpu_traversers, trv.data(), sizeof(int32_t) * sz, cudaMemcpyHostToDevice); // blocking is implied here
+    cudaMemcpy(gpu_traversers, trv.data(), sizeof(int32_t) * sz, cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("copy traversers to device");
     return gpu_traversers;
 }
 
