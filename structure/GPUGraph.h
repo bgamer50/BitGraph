@@ -252,19 +252,6 @@ GPUGraph::GPUGraph(CPUGraph& cpu_graph): Graph() {
 
     // Move the adjacency matrix to the GPU and save its pointer
     this->adjacency_matrix = sparse_convert_host_to_device(this->cusparse_handle, M);
-    std::cout << "nnz: " << M.nnz << std::endl;
-    std::cout << "num values: " << M.values.size() << std::endl;
-    std::cout << "values:" << std::endl;
-    for(auto v : M.values) std::cout << v << ", ";
-    std::cout << std::endl;
-    
-    std::cout << "row ptr: (" << M.row_ptr.size() << " values)" << std::endl;
-    for(auto v : M.row_ptr) std::cout << v << ", ";
-    std::cout << std::endl;
-
-    std::cout << "col_idx: (" << M.col_ptr.size() << " values)" << std::endl;
-    for(auto v : M.col_ptr) std::cout << v << ", ";
-    std::cout << std::endl;
 }
 
 #include "traversal/GPUGraphTraversalSource.h"

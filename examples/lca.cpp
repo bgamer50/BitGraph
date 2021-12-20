@@ -138,7 +138,7 @@ int main(int charc, char* argv[]) {
                 repeat(__->in())->emit(__->has(NAME, voi2))->
                 select("x")->limit(1)->values(NAME)->next();
         std::cout << "found the lca!" << std::endl;
-        std::cout << "The lowest common ancestor of A and D is " + boost::any_cast<std::string>(lca) << std::endl;
+        std::cout << "The lowest common ancestor is " + boost::any_cast<std::string>(lca) << std::endl;
         
     } catch(std::exception& err) {
         std::cout << err.what() << std::endl;
