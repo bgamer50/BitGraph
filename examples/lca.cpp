@@ -33,6 +33,9 @@ int main(int charc, char* argv[]) {
 
     std::string nodes_file = argv[1];
     std::string edges_file = argv[2];
+    std::string processor = argv[3];
+    std::string voi1 = argv[4];
+    std::string voi2 = argv[5];
 
     /*
     try {
@@ -126,17 +129,16 @@ int main(int charc, char* argv[]) {
     std::cout << "graph created" << std::endl;
     cudaSetDevice(0);
     GPUGraph gpu_graph(graph);
-    g = gpu_graph.traversal();
+    g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
     try {
         boost::any lca = 
-            g->V()->has(NAME, "A")->
+            g->V()->has(NAME, voi1)->
                 repeat(__->out())->emit()->as("x")->
-                repeat(__->in())->emit(__->has(NAME, "D"))->
+                repeat(__->in())->emit(__->has(NAME, voi2))->
                 select("x")->limit(1)->values(NAME)->next();
         std::cout << "found the lca!" << std::endl;
-        std::cout << "The lowest common ancestor of A and D is " + get_string(lca) << std::endl;
-        std::cout << ((get_string(lca) == "C") ? "Success!" : "Failure!") << std::endl;
+        std::cout << "The lowest common ancestor of A and D is " + boost::any_cast<std::string>(lca) << std::endl;
         
     } catch(std::exception& err) {
         std::cout << err.what() << std::endl;

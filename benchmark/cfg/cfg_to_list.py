@@ -12,7 +12,7 @@ filename_in = argv[1]
 filename_out_nodes = argv[2]
 filename_out_edges = argv[3]
 
-stack = []
+stack = ['root']
 with open(filename_in, 'r') as infile:
     with open(filename_out_nodes, 'w') as outfile_nodes:
         outfile_nodes.write('NAME,INFO,LEVEL\n')
@@ -26,9 +26,9 @@ with open(filename_in, 'r') as infile:
                 if '`' not in line:
                     #line = ''.join([c for c in line if unicodedata.category(c)[0] != 'C'])
 
-                    level = len([c for c in line if c == '|'])
+                    level = len([c for c in line if c == '|']) + 1
                     
-                    if level > 0:
+                    if level > 1:
                         m = expr.match(line)
                         if m is not None:
                             info_str = m.groups()[0].replace(' ','_')
