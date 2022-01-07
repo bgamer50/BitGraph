@@ -16,6 +16,7 @@ stack = ['root']
 with open(filename_in, 'r') as infile:
     with open(filename_out_nodes, 'w') as outfile_nodes:
         outfile_nodes.write('NAME,INFO,LEVEL\n')
+        outfile_nodes.write('root,root,0\n')
 
         with open(filename_out_edges, 'w') as outfile_edges:
             for i, line in enumerate(infile.readlines()):
