@@ -6,6 +6,8 @@
 #include "step/vertex/VertexStep.h"
 #include "step/cpu/IndexStep.h"
 #include "step/cpu/HasWithIndexStep.h"
+#include "step/graph/SubgraphExtractionStep.h"
+#include "step/cpu/CPUSubgraphExtractionStep.h"
 
 class CPUGraph;
 
@@ -63,6 +65,11 @@ void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {
 			GraphStep* graph_step = static_cast<GraphStep*>(current_step);
 			BitGraphStep* bitgraph_step = new BitGraphStep(false, graph_step->getType(), graph_step->get_element_ids());
 			*it = bitgraph_step;
+		} else if(current_step->uid == SUBGRAPH_EXTRACTION_STEP) {
+			SubgraphExtractionStep* subgraph_extraction_step = static_cast<SubgraphExtractionStep*>(current_step);
+			CPUSubgraphExtractionStep* cpu_subgraph_extraction_step = new CPUSubgraphExtractionStep(subgraph_extraction_step->get_subgraph_name());
+			*it = cpu_subgraph_extraction_step;
+			delete current_step;
 		}
 	}
 }
