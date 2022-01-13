@@ -107,7 +107,7 @@ int main(int charc, char* argv[]) {
     GPUGraph gpu_graph(graph);
     g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
-    g->V()->as("s")->out()->out()->has("INFO", std::string("ClassTemplateSpecializationDecl"))->select("s")->values("INFO")->forEachRemaining([](boost::any& b){
+    g->V()->as("s")->out()->out()->dedup()->has("INFO", std::string("ClassTemplateSpecializationDecl"))->select("s")->values("INFO")->forEachRemaining([](boost::any& b){
         std::cout << boost::any_cast<std::string>(b) << std::endl;
     });
 }

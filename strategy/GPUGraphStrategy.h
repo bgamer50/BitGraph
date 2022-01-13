@@ -43,7 +43,15 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 
 			case VERTEX_STEP: {
 				VertexStep* vertex_step = static_cast<VertexStep*>(current_step);
-				GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type());
+				
+				bool dedup = false;
+				auto next_step = it + 1;
+				if(next_step != steps.end() && (*next_step)->uid == DEDUP_STEP) {
+					dedup = true;
+					it = steps.erase(next_step) - 1;
+				}
+
+				GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type(), dedup);
 				if(!gpu_vertex_step->chained) {
 					it = steps.insert(it, new GPUBindStep()) + 1;
 					it = steps.insert(it + 1, new GPUUnbindStep()) - 1;

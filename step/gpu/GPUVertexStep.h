@@ -13,17 +13,22 @@ class GPUVertexStep : public TraversalStep {
         Direction direction;
         std::set<std::string> edge_labels;
         GraphStepType gs_type;
+        bool dedup;
 
     public:
         // whether this step has gone through the chaining process
         bool chained = false;
 
-        GPUVertexStep(Direction direction, std::set<std::string> edge_labels, GraphStepType gs_type)
+        GPUVertexStep(Direction direction, std::set<std::string> edge_labels, GraphStepType gs_type, bool dedup)
         : TraversalStep(MAP, GPU_VERTEX_STEP) {
             this->direction = direction;
             this->edge_labels = edge_labels;
             this->gs_type = gs_type;
+            this->dedup = dedup;
         }
+
+        GPUVertexStep(Direction direction, std::set<std::string> edge_labels, GraphStepType gs_type) 
+        : GPUVertexStep(direction, edge_labels, gs_type, false){}
 
         virtual void apply(GraphTraversal* traversal, TraverserSet& traversers);
 };
@@ -56,10 +61,23 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
         cudaFree(gpu_element_traversers);
         cudaDeviceSynchronize();
         cudaCheckErrors("free gpu element traversers");
-        
-        traverser_info.num_traversers = std::get<2>(new_gpu_traversers);
-        traverser_info.traversers = std::get<0>(new_gpu_traversers);
-        traverser_info.paths.push_back(std::make_pair(std::get<1>(new_gpu_traversers), traverser_info.num_traversers));
+
+        auto& new_traversers = std::get<0>(new_gpu_traversers);
+        auto& output_origin = std::get<1>(new_gpu_traversers);
+        auto& num_traversers = std::get<2>(new_gpu_traversers);
+        if(this->dedup) {
+            std::tuple<int32_t*, int32_t*, int32_t> picks = pick_unique(new_traversers, num_traversers, 0, adjacency_matrix.num_rows - 1);
+
+            traverser_info.num_traversers = std::get<2>(picks);
+            traverser_info.traversers = std::get<0>(picks);
+            traverser_info.paths.push_back(std::make_pair(output_origin, num_traversers));
+            traverser_info.paths.push_back(std::make_pair(std::get<1>(picks), traverser_info.num_traversers));
+        }
+        else {
+            traverser_info.num_traversers = num_traversers;
+            traverser_info.traversers = new_traversers;
+            traverser_info.paths.push_back(std::make_pair(output_origin, traverser_info.num_traversers));
+        }
 
         traversers.front().replace_data(traverser_info);
     } else {
