@@ -6,12 +6,15 @@ edges_file = args[1]
 graph_type = args[2]
 EDGE_LABEL = 'tree_edge'
 LABEL_V = 'basic_vertex'
-NAME = 'name'
+NAME = 'NAME'
 
 if(graph_type == 'tinkergraph') {
   graph = TinkerGraph.open()
+  graph.createIndex(NAME, Vertex.class)
 } else if(graph_type == 'neo4j') {
   graph = Neo4jGraph.open('data/neo4j_ce')
+  graph.cypher(String.format('CREATE INDEX ON :%s(%s)', LABEL_V, NAME))
+  graph.tx().commit()
 } else {
   throw new IllegalArgumentException('invalid graph system')
 }

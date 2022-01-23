@@ -8,9 +8,12 @@ LABEL_V = 'basic_vertex'
 NAME = 'name'
 
 if(graph_type == 'tinkergraph') {
-  graph = TinkerGraph.open()
+    graph = TinkerGraph.open()
+    graph.createIndex(NAME, Vertex.class)
 } else if(graph_type == 'neo4j') {
-  graph = Neo4jGraph.open('data/neo4j_ce')
+    graph = Neo4jGraph.open('data/neo4j_ce')
+    graph.cypher(String.format('CREATE INDEX ON :%s(%s)', LABEL_V, NAME))
+    graph.tx().commit()
 } else {
   throw new IllegalArgumentException('invalid graph system')
 }
