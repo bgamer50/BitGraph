@@ -5,6 +5,7 @@ nodes_file = args[0]
 edges_file = args[1]
 graph_type = args[2]
 EDGE_LABEL = 'tree_edge'
+LABEL_V = 'basic_vertex'
 
 if(graph_type == 'tinkergraph') {
   graph = TinkerGraph.open()
@@ -24,7 +25,7 @@ k = 0
 while(scn_nodes.hasNextLine()) {
   if(k % 1000 == 0) println(k)
   ln = scn_nodes.nextLine().split(',');
-  v = g.addV().property('NAME',ln[0]).property('INFO',ln[1]).property('LEVEL',ln[2]).next()
+  v = g.addV(LABEL_V).property('NAME',ln[0]).property('INFO',ln[1]).property('LEVEL',ln[2]).next()
   m[ln[0]] = v
   k++
 }
@@ -49,3 +50,5 @@ end = now()
 println(r)
 elapsed = end - start
 perror('lca time: ' + (elapsed/1000.0).toString())
+
+:q

@@ -5,6 +5,7 @@ start_v_name = "100";
 edges_file = args[0]
 graph_type = args[1]
 EDGE_LABEL = 'basic_edge'
+LABEL_V = 'basic_vertex'
 
 if(graph_type == 'tinkergraph') {
   graph = TinkerGraph.open()
@@ -35,7 +36,7 @@ while(s.hasNextInt()) {
 	names.add(i);
 	names.add(j);
 
-	g.V(v1).addE(LABEL_E).to(v2).iterate();
+	g.V(v1).addE(EDGE_LABEL).to(v2).iterate();
 }
 
 endTime = System.currentTimeMillis()
@@ -59,3 +60,5 @@ end = now()
 println(count)
 elapsed = end - start
 perror('dos time (with repeat): ' + (elapsed/1000.0).toString())
+
+:q
