@@ -132,13 +132,18 @@ int main(int charc, char* argv[]) {
     g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
     try {
+        start = std::chrono::system_clock::now();
         boost::any lca = 
             g->V()->has(NAME, voi1)->
                 repeat(__->out())->emit()->as("x")->
                 repeat(__->in())->emit(__->has(NAME, voi2))->
                 select("x")->limit(1)->values(NAME)->next();
+        end = std::chrono::system_clock::now();
         std::cout << "found the lca!" << std::endl;
         std::cout << "The lowest common ancestor is " + boost::any_cast<std::string>(lca) << std::endl;
+        
+        elapsed = end - start;
+        std::cerr << "lca time: " << elapsed.count() " seconds" << std::endl;
         
     } catch(std::exception& err) {
         std::cout << err.what() << std::endl;

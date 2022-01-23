@@ -4,6 +4,7 @@ Written by Alexandria Barghi
 
 #include "structure/CPUGraph.h"
 #include "structure/GPUGraph.h"
+#include "util/gremlin_utils.hpp"
 
 #include <string>
 #include <fstream>
@@ -107,7 +108,30 @@ int main(int charc, char* argv[]) {
     GPUGraph gpu_graph(graph);
     g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
-    g->V()->as("s")->out()->out()->dedup()->has("INFO", std::string("ClassTemplateSpecializationDecl"))->select("s")->values("INFO")->forEachRemaining([](boost::any& b){
-        std::cout << boost::any_cast<std::string>(b) << std::endl;
-    });
+    // Traversal 1: Find nodes whose grandparent is a class template specialization and get their types.
+    std::cout << "Beginning Traversal 1..." << std::endl;
+    start = std::chrono::system_clock::now();
+    auto res = g->V()->as("s")->out()->dedup()->out()->dedup()->has("INFO", "ClassTemplateSpecializationDecl")->select("s")->values('INFO')->toVector();
+    end = std::chrono::system_clock::now();
+    elapsed = end - start;
+    for(boost::any b : res) std::cout << string_any(b) << std::endl;
+    std::cerr << "cfg Traversal 1 Time: " << elapsed.count() << "seconds" << std::endl;
+
+    // Traversal 2: Find the unique types of nodes between a Class template specialization and a namespace declaration
+    std::cout << "Beginning Traversal 2..." << std::endl;
+    start = std::chrono::system_clock::now();
+    res = g->V()->has("INFO","ClassTemplateSpecialization")->out()->as("t")->dedup()->out()->dedup()->has("INFO","NamespaceDecl")->select("t")->values("INFO")->dedup()->toVector();
+    end = std::chrono::system_clock::now();
+    elapsed = end - start;
+    for(boost::any b : res) std::cout << string_any(b) << std::endl;
+    std::cerr << "cfg Traversal 2 Time: " << elapsed.count() << "seconds" << std::endl;
+
+    // Traversal 3: For each while loop, count the number of if statements under the while loop
+    std::cout << "Beginning Traversal 3..." << std::endl;
+    start = std::chrono::system_clock::now();
+    auto count_vec = std::any_cast<std::vector<std::pair<boost::any, size_t>>>(g->V()->has("INFO","WhileStmt").as("w")->repeat(__->in())->emit(__->has("INFO","IfStmt"))->select("w")->values("NAME")->groupCount()->next());
+    end = std::chrono::system_clock::now();
+    elapsed = end - start;
+    for(std::pair<boost::any, size_t> b : res) std::cout << string_any(b.first) << "=" << b.second << std::endl;
+    std::cerr << "cfg Traversal 3 Time: " << elapsed.count() << "seconds" << std::endl;
 }
