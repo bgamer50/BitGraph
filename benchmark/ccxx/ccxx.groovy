@@ -54,7 +54,7 @@ while(diff > 0) {
     diff = g.V().
         property("old_cc", __.values("cc")).
         property("cc", 
-            __.union({__.both().values("old_cc"), __.values("old_cc")}).min()
+            __.union(__.both().values("old_cc"), __.values("old_cc")).min()
         ).
         valueMap({"cc","old_cc"}).by(__.unfold()).
         where("cc", neq("old_cc")).
