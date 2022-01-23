@@ -108,14 +108,16 @@ int main(int argc, char* argv[]) {
         });
         std::cout << comp_set.size() << " components!" << std::endl;
 
-        start = std::chrono::system_clock::now();
-        auto* algo = (new ConnectedComponentsGPUGraphAlgorithm())->option(ConnectedComponentsGPUGraphAlgorithm::OPTION_DIRECTION, BOTH);
-        auto algo_result = gpu_graph.algorithm(algo);
-        end = std::chrono::system_clock::now();
-        elapsed = end - start;
-        std::cerr << "CCalgo time: " << elapsed.count() << " seconds." << std::endl;
-        std::cout << boost::any_cast<std::unordered_map<std::string, std::vector<uint64_t>>>(algo_result[ConnectedComponentsGPUGraphAlgorithm::OUTPUT_COMPONENTS]).size() << " components." << std::endl;
-        delete algo;
+        if(processor == "gpu") {
+            start = std::chrono::system_clock::now();
+            auto* algo = (new ConnectedComponentsGPUGraphAlgorithm())->option(ConnectedComponentsGPUGraphAlgorithm::OPTION_DIRECTION, BOTH);
+            auto algo_result = gpu_graph.algorithm(algo);
+            end = std::chrono::system_clock::now();
+            elapsed = end - start;
+            std::cerr << "CCalgo time: " << elapsed.count() << " seconds." << std::endl;
+            std::cout << boost::any_cast<std::unordered_map<std::string, std::vector<uint64_t>>>(algo_result[ConnectedComponentsGPUGraphAlgorithm::OUTPUT_COMPONENTS]).size() << " components." << std::endl;
+            delete algo;
+        }
 
     } catch(const std::exception& err) {
         std::cout << err.what() << std::endl;
