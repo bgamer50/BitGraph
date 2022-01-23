@@ -56,7 +56,7 @@ while(diff > 0) {
         property("cc", 
             __.union(__.both().values("old_cc"), __.values("old_cc")).min()
         ).
-        valueMap({"cc","old_cc"}).by(__.unfold()).
+        valueMap("cc","old_cc").by(__.unfold()).
         where("cc", neq("old_cc")).
         count().
         next()
