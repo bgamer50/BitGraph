@@ -1,10 +1,11 @@
 import cudf,cugraph
 from datetime import datetime
+from sys import argv 
 
 fname = argv[0]
 
 edge_df = cudf.read_csv(fname, names=['out','in'], sep=' ')
-graph = cugraph.from_edgelist(df,'out','in')
+graph = cugraph.from_edgelist(edge_df,'out','in')
 
 start_time = datetime.now()
 ccxx_results = cugraph.connected_components(graph)

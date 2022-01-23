@@ -8,11 +8,9 @@ EDGE_LABEL = 'basic_edge'
 
 if(graph_type == 'tinkergraph') {
   graph = TinkerGraph.open()
-}
-else if(graph_type == 'neo4j') {
+} else if(graph_type == 'neo4j') {
   graph = Neo4jGraph.open('data/neo4j_ce')
-}
-else {
+} else {
   throw new IllegalArgumentException('invalid graph system')
 }
 
