@@ -6,6 +6,7 @@ edges_file = args[1]
 graph_type = args[2]
 EDGE_LABEL = 'tree_edge'
 LABEL_V = 'basic_vertex'
+NAME = 'name'
 
 if(graph_type == 'tinkergraph') {
   graph = TinkerGraph.open()
