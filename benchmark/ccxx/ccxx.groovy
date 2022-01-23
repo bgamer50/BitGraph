@@ -56,6 +56,7 @@ diff = 1
 while(diff > 0) {
     diff = g.V().
         property("old_cc", __.values("cc")).
+        barrier().
         property("cc", 
             __.union(__.both().values("old_cc"), __.values("old_cc")).min()
         ).
