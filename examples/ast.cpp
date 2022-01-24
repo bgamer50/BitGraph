@@ -131,7 +131,7 @@ int main(int charc, char* argv[]) {
         // Traversal 3: For each while loop, count the number of if statements under the while loop
         std::cout << "Beginning Traversal 3..." << std::endl;
         start = std::chrono::system_clock::now();
-        auto count_vec = boost::any_cast<std::vector<std::pair<boost::any, size_t>>>(g->V()->has("INFO","WhileStmt").as("w")->repeat(__->in())->emit(__->has("INFO","IfStmt"))->select("w")->values("NAME")->groupCount()->next());
+        auto count_vec = boost::any_cast<std::vector<std::pair<boost::any, size_t>>>(g->V()->has("INFO","WhileStmt")->as("w")->repeat(__->in())->emit(__->has("INFO","IfStmt"))->select("w")->values("NAME")->groupCount()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         for(std::pair<boost::any, size_t> b : res) std::cout << string_any(b.first) << "=" << b.second << std::endl;
