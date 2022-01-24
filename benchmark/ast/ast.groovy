@@ -65,7 +65,7 @@ while(r < tries) {
 
   // Traversal 3: For each while loop, count the number of if statements under the while loop
   start = now()
-  r = g.V().has('INFO','WhileStmt').as('w').repeat(__.in()).emit(has('INFO','IfStmt')).select('w').values('NAME').groupCount().next()
+  r = g.V().has('INFO','WhileStmt').as('w').repeat(__.in()).emit(has('INFO','IfStmt')).select('w').values('NAME').groupCount().toList()
   end = now()
   println(r)
   elapsed = end - start
