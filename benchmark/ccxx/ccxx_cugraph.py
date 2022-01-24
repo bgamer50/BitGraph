@@ -2,8 +2,8 @@ import cudf,cugraph
 from datetime import datetime
 from sys import argv 
 
-fname = argv[0]
-tries = int(argv[1])
+fname = argv[1]
+tries = int(argv[2])
 
 edge_df = cudf.read_csv(fname, names=['out','in'], sep=' ')
 graph = cugraph.from_edgelist(edge_df,'out','in')
