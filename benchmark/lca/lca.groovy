@@ -3,7 +3,10 @@ now = System.&currentTimeMillis
 
 nodes_file = args[0]
 edges_file = args[1]
-graph_type = args[2]
+voi1 = args[2]
+voi2 = args[3]
+graph_type = args[4]
+tries = Integer.parseInt(args[5])
 EDGE_LABEL = 'tree_edge'
 LABEL_V = 'basic_vertex'
 NAME = 'NAME'
@@ -44,15 +47,19 @@ while(scn_edges.hasNextLine()) {
 }
 scn_edges.close()
 
-// Find the lca
-start = now()
-lca = g.V().has(NAME, voi1).
-    repeat(__.out()).emit().as("x").
-    repeat(__.in()).emit(__.has(NAME, voi2)).
-    select("x").limit(1).values(NAME).next()
-end = now()
-println(r)
-elapsed = end - start
-perror('lca time: ' + (elapsed/1000.0).toString())
-
+r = 0
+while(r < tries) {
+    // Find the lca
+    start = now()
+    lca = g.V().has(NAME, voi1).
+        repeat(__.out()).emit().as("x").
+        repeat(__.in()).emit(__.has(NAME, voi2)).
+        select("x").limit(1).values(NAME).next()
+    end = now()
+    println(r)
+    elapsed = end - start
+    perror('lca time: ' + (elapsed/1000.0).toString())
+    
+    r++
+}
 :q

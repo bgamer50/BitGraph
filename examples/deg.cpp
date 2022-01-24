@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
 
     std::string filename = argv[1];
     std::string processor = argv[2];
+    size_t tries = std::atol(argv[3]);
     FILE* f = fopen(filename.c_str(), "r");
 
     char id1[10];
@@ -76,34 +77,36 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
 
-    try {
-        std::cout << "calculating out-degree for all vertices" << std::endl;
-        start = std::chrono::system_clock::now();
-        h->V()->property("out_degree", __->out()->count())->iterate();
-        end = std::chrono::system_clock::now();
-        elapsed = end-start;
-        std::cerr << "out-degree time: " << elapsed.count() << " seconds." << std::endl;
-        std::cout << boost::any_cast<size_t>(g.V()->has(NAME, "1000")->values("out_degree")->next());
+    for(size_t r = 0; r < tries; ++r) {
+        try {
+            std::cout << "calculating out-degree for all vertices" << std::endl;
+            start = std::chrono::system_clock::now();
+            h->V()->property("out_degree", __->out()->count())->iterate();
+            end = std::chrono::system_clock::now();
+            elapsed = end-start;
+            std::cerr << "out-degree time: " << elapsed.count() << " seconds." << std::endl;
+            std::cout << boost::any_cast<size_t>(g.V()->has(NAME, "1000")->values("out_degree")->next());
 
-        std::cout << "calculating in-degree for all vertices" << std::endl;
-        start = std::chrono::system_clock::now();
-        h->V()->property("in_degree", __->in()->count())->iterate();
-        end = std::chrono::system_clock::now();
-        elapsed = end-start;
-        std::cerr << "in-degree time: " << elapsed.count() << " seconds." << std::endl;
-        std::cout << boost::any_cast<size_t>(g.V()->has(NAME, "1000")->values("in_degree")->next());
+            std::cout << "calculating in-degree for all vertices" << std::endl;
+            start = std::chrono::system_clock::now();
+            h->V()->property("in_degree", __->in()->count())->iterate();
+            end = std::chrono::system_clock::now();
+            elapsed = end-start;
+            std::cerr << "in-degree time: " << elapsed.count() << " seconds." << std::endl;
+            std::cout << boost::any_cast<size_t>(g.V()->has(NAME, "1000")->values("in_degree")->next());
 
-        std::cout << "calculating both-degree for all vertices" << std::endl;
-        start = std::chrono::system_clock::now();
-        h->V()->property("both_degree", __->both()->count())->iterate();
-        end = std::chrono::system_clock::now();
-        elapsed = end-start;
-        std::cerr << "both-degree time: " << elapsed.count() << " seconds." << std::endl;
-        std::cout << boost::any_cast<size_t>(g->V()->has(NAME, "1000")->values("both_degree")->next());
+            std::cout << "calculating both-degree for all vertices" << std::endl;
+            start = std::chrono::system_clock::now();
+            h->V()->property("both_degree", __->both()->count())->iterate();
+            end = std::chrono::system_clock::now();
+            elapsed = end-start;
+            std::cerr << "both-degree time: " << elapsed.count() << " seconds." << std::endl;
+            std::cout << boost::any_cast<size_t>(g->V()->has(NAME, "1000")->values("both_degree")->next());
 
-    } catch(const std::exception& err) {
-        std::cout << err.what() << std::endl;
-        return -1;
+        } catch(const std::exception& err) {
+            std::cout << err.what() << std::endl;
+            return -1;
+        }
     }
 
     fclose(f);

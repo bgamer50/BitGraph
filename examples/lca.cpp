@@ -33,9 +33,10 @@ int main(int charc, char* argv[]) {
 
     std::string nodes_file = argv[1];
     std::string edges_file = argv[2];
-    std::string processor = argv[3];
-    std::string voi1 = argv[4];
-    std::string voi2 = argv[5];
+    std::string voi1 = argv[3];
+    std::string voi2 = argv[4];
+    std::string processor = argv[5];
+    size_t tries = std::atol(argv[6]);
 
     /*
     try {
@@ -131,21 +132,23 @@ int main(int charc, char* argv[]) {
     GPUGraph gpu_graph(graph);
     g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
-    try {
-        start = std::chrono::system_clock::now();
-        boost::any lca = 
-            g->V()->has(NAME, voi1)->
-                repeat(__->out())->emit()->as("x")->
-                repeat(__->in())->emit(__->has(NAME, voi2))->
-                select("x")->limit(1)->values(NAME)->next();
-        end = std::chrono::system_clock::now();
-        std::cout << "found the lca!" << std::endl;
-        std::cout << "The lowest common ancestor is " + boost::any_cast<std::string>(lca) << std::endl;
-        
-        elapsed = end - start;
-        std::cerr << "lca time: " << elapsed.count() " seconds" << std::endl;
-        
-    } catch(std::exception& err) {
-        std::cout << err.what() << std::endl;
+    for(size_t r = 0; r < tries; ++r) {
+        try {
+            start = std::chrono::system_clock::now();
+            boost::any lca = 
+                g->V()->has(NAME, voi1)->
+                    repeat(__->out())->emit()->as("x")->
+                    repeat(__->in())->emit(__->has(NAME, voi2))->
+                    select("x")->limit(1)->values(NAME)->next();
+            end = std::chrono::system_clock::now();
+            std::cout << "found the lca!" << std::endl;
+            std::cout << "The lowest common ancestor is " + boost::any_cast<std::string>(lca) << std::endl;
+            
+            elapsed = end - start;
+            std::cerr << "lca time: " << elapsed.count() " seconds" << std::endl;
+            
+        } catch(std::exception& err) {
+            std::cout << err.what() << std::endl;
+        }
     }
 }

@@ -3,6 +3,7 @@ now = System.&currentTimeMillis
 
 edges_file = args[0]
 graph_type = args[1]
+tries = Integer.parseInt(args[2])
 EDGE_LABEL = 'basic_edge'
 LABEL_V = 'basic_vertex'
 NAME = 'name'
@@ -47,28 +48,33 @@ timeDiff = endTime - startTime
 
 System.err.println('ingest time: ' + (timeDiff / 1000.0).toString() + 'seconds.')
 
-println('Calculating out-degree for all vertices')
-start = now()
-g.V().property("out_degree", __.out().count()).iterate()
-end = now()
-println(g.V().has(NAME, "1000").values("out_degree").next())
-elapsed = end - start
-perror('dos time: ' + (elapsed/1000.0).toString())
+r = 0
+while(r < tries) {
+    println('Calculating out-degree for all vertices')
+    start = now()
+    g.V().property("out_degree", __.out().count()).iterate()
+    end = now()
+    println(g.V().has(NAME, "1000").values("out_degree").next())
+    elapsed = end - start
+    perror('dos time: ' + (elapsed/1000.0).toString())
 
-println('Calculating in-degree for all vertices')
-start = now()
-g.V().property("in_degree", __.in().count()).iterate()
-end = now()
-println(g.V().has(NAME, "1000").values("in_degree").next())
-elapsed = end - start
-perror('dos time: ' + (elapsed/1000.0).toString())
+    println('Calculating in-degree for all vertices')
+    start = now()
+    g.V().property("in_degree", __.in().count()).iterate()
+    end = now()
+    println(g.V().has(NAME, "1000").values("in_degree").next())
+    elapsed = end - start
+    perror('dos time: ' + (elapsed/1000.0).toString())
 
-println('Calculating both-degree for all vertices')
-start = now()
-g.V().property("both_degree", __.both().count()).iterate()
-end = now()
-println(g.V().has(NAME, "1000").values("both_degree").next())
-elapsed = end - start
-perror('dos time: ' + (elapsed/1000.0).toString())
+    println('Calculating both-degree for all vertices')
+    start = now()
+    g.V().property("both_degree", __.both().count()).iterate()
+    end = now()
+    println(g.V().has(NAME, "1000").values("both_degree").next())
+    elapsed = end - start
+    perror('dos time: ' + (elapsed/1000.0).toString())
+
+    r++
+}
 
 :q

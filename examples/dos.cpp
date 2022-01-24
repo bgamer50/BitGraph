@@ -33,6 +33,7 @@ int main(int charc, char* argv[]) {
 
     std::string filename = argv[1];
     std::string processor = argv[2];
+    size_t tries = std::atol(argv[3]);
     FILE* f = fopen(filename.c_str(), "r");
 
     char id1[10];
@@ -68,19 +69,21 @@ int main(int charc, char* argv[]) {
     GPUGraph gpu_graph(graph);
     g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
-    std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << std::endl;
-    start = std::chrono::system_clock::now();
-    auto count = boost::any_cast<size_t>(g->V()->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
-    end = std::chrono::system_clock::now();
-    elapsed = end - start;
-    std::cout << count << std::endl;
-    std::cerr << "dos time: " << elapsed.count() << " seconds." << std::endl;
+    for(size_t r = 0; r < tries; ++r) {
+        std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << std::endl;
+        start = std::chrono::system_clock::now();
+        auto count = boost::any_cast<size_t>(g->V()->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
+        end = std::chrono::system_clock::now();
+        elapsed = end - start;
+        std::cout << count << std::endl;
+        std::cerr << "dos time: " << elapsed.count() << " seconds." << std::endl;
 
-    std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << " using repeat step" << std::endl;
-    start = std::chrono::system:clock::now();
-    count = boost::any_cast<size_t>(g->V()->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
-    end = std::chrono::system_clock::now();
-    elapsed = end - start;
-    std::cout << count << std::endl;
-    std::cerr << "dos time with repeat: " << elapsed.count() << " seconds." << std::endl;
+        std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << " using repeat step" << std::endl;
+        start = std::chrono::system:clock::now();
+        count = boost::any_cast<size_t>(g->V()->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
+        end = std::chrono::system_clock::now();
+        elapsed = end - start;
+        std::cout << count << std::endl;
+        std::cerr << "dos time with repeat: " << elapsed.count() << " seconds." << std::endl;
+    }
 }

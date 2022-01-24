@@ -4,6 +4,7 @@ now = System.&currentTimeMillis
 start_v_name = "100";
 edges_file = args[0]
 graph_type = args[1]
+tries = Integer.parseInt(args[2])
 EDGE_LABEL = 'basic_edge'
 LABEL_V = 'basic_vertex'
 NAME = 'name'
@@ -48,21 +49,25 @@ timeDiff = endTime - startTime
 
 System.err.println('ingest time: ' + (timeDiff / 1000.0).toString() + 'seconds.')
 
-v = g.V().has('NAME', start_v_name).next();
-println('Calculating 3 degrees of separation from vertex ' + start_v_name)
-start = now()
-count = g.V(v).out().dedup().out().dedup().out().dedup().count()
-end = now()
-println(count)
-elapsed = end - start
-perror('dos time: ' + (elapsed/1000.0).toString())
+r = 0
+while(r < tries) {
+    v = g.V().has('NAME', start_v_name).next();
+    println('Calculating 3 degrees of separation from vertex ' + start_v_name)
+    start = now()
+    count = g.V(v).out().dedup().out().dedup().out().dedup().count()
+    end = now()
+    println(count)
+    elapsed = end - start
+    perror('dos time: ' + (elapsed/1000.0).toString())
 
-println('Calculating 3 degrees of separation from vertex ' + start_v_name + ' using repeat() step')
-start = now()
-count = g.V(v).repeat(out().dedup()).times(3).count()
-end = now()
-println(count)
-elapsed = end - start
-perror('dos time (with repeat): ' + (elapsed/1000.0).toString())
+    println('Calculating 3 degrees of separation from vertex ' + start_v_name + ' using repeat() step')
+    start = now()
+    count = g.V(v).repeat(out().dedup()).times(3).count()
+    end = now()
+    println(count)
+    elapsed = end - start
+    perror('dos time (with repeat): ' + (elapsed/1000.0).toString())
 
+    r++
+}
 :q

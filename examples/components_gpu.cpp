@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
 
     std::string filename = argv[1];
     std::string processor = argv[2];
+    size_t tries = std::atol(argv[3]);
     FILE* f = fopen(filename.c_str(), "r");
 
     char id1[10];
@@ -76,52 +77,54 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
 
-    try {
-        start = std::chrono::system_clock::now();
-
-        h->V()->property("cc", __->id())->iterate();
-        h->V()->property("old_cc", __->values("cc"))->iterate();
-        
-        size_t diff = 1;
-        while(diff > 0) {
-            diff = boost::any_cast<size_t>(
-                h->V()
-                ->property("old_cc", __->values("cc"))
-                ->property("cc", 
-                    __->_union({__->both()->values("old_cc"), __->values("old_cc")})->min(C<uint64_t>::compare())
-                )
-                ->valueMap({"cc","old_cc"})->by(__->unfold())
-                ->where("cc", P::neq("old_cc"))
-                ->count()
-                ->next()
-            );
-            std::cout << "diff: " << diff << std::endl;
-        }
-        end = std::chrono::system_clock::now();
-        elapsed = end-start;
-        std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
-        std::unordered_set<int> comp_set;
-        h->V()->values("cc")->forEachRemaining([g,&comp_set](boost::any& v) {
-            int id = boost::any_cast<uint64_t>(v);
-            comp_set.insert(id);
-            //std::cout << id << std::endl;
-        });
-        std::cout << comp_set.size() << " components!" << std::endl;
-
-        if(processor == "gpu") {
+    for(size_t r = 0; r < tries; ++r) {
+        try {
             start = std::chrono::system_clock::now();
-            auto* algo = (new ConnectedComponentsGPUGraphAlgorithm())->option(ConnectedComponentsGPUGraphAlgorithm::OPTION_DIRECTION, BOTH);
-            auto algo_result = gpu_graph.algorithm(algo);
-            end = std::chrono::system_clock::now();
-            elapsed = end - start;
-            std::cerr << "CCalgo time: " << elapsed.count() << " seconds." << std::endl;
-            std::cout << boost::any_cast<std::unordered_map<std::string, std::vector<uint64_t>>>(algo_result[ConnectedComponentsGPUGraphAlgorithm::OUTPUT_COMPONENTS]).size() << " components." << std::endl;
-            delete algo;
-        }
 
-    } catch(const std::exception& err) {
-        std::cout << err.what() << std::endl;
-        return -1;
+            h->V()->property("cc", __->id())->iterate();
+            h->V()->property("old_cc", __->values("cc"))->iterate();
+            
+            size_t diff = 1;
+            while(diff > 0) {
+                diff = boost::any_cast<size_t>(
+                    h->V()
+                    ->property("old_cc", __->values("cc"))
+                    ->property("cc", 
+                        __->_union({__->both()->values("old_cc"), __->values("old_cc")})->min(C<uint64_t>::compare())
+                    )
+                    ->valueMap({"cc","old_cc"})->by(__->unfold())
+                    ->where("cc", P::neq("old_cc"))
+                    ->count()
+                    ->next()
+                );
+                std::cout << "diff: " << diff << std::endl;
+            }
+            end = std::chrono::system_clock::now();
+            elapsed = end-start;
+            std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
+            std::unordered_set<int> comp_set;
+            h->V()->values("cc")->forEachRemaining([g,&comp_set](boost::any& v) {
+                int id = boost::any_cast<uint64_t>(v);
+                comp_set.insert(id);
+                //std::cout << id << std::endl;
+            });
+            std::cout << comp_set.size() << " components!" << std::endl;
+
+            if(processor == "gpu") {
+                start = std::chrono::system_clock::now();
+                auto* algo = (new ConnectedComponentsGPUGraphAlgorithm())->option(ConnectedComponentsGPUGraphAlgorithm::OPTION_DIRECTION, BOTH);
+                auto algo_result = gpu_graph.algorithm(algo);
+                end = std::chrono::system_clock::now();
+                elapsed = end - start;
+                std::cerr << "CCalgo time: " << elapsed.count() << " seconds." << std::endl;
+                std::cout << boost::any_cast<std::unordered_map<std::string, std::vector<uint64_t>>>(algo_result[ConnectedComponentsGPUGraphAlgorithm::OUTPUT_COMPONENTS]).size() << " components." << std::endl;
+                delete algo;
+            }
+
+        } catch(const std::exception& err) {
+            std::cout << err.what() << std::endl;
+            return -1;
+        }
     }
 
     fclose(f);
