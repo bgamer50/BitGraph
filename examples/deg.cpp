@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
             end = std::chrono::system_clock::now();
             elapsed = end-start;
             std::cerr << "out-degree time: " << elapsed.count() << " seconds." << std::endl;
-            std::cout << boost::any_cast<size_t>(g.V()->has(NAME, "1000")->values("out_degree")->next());
+            std::cout << boost::any_cast<size_t>(g->V()->has(NAME, "1000")->values("out_degree")->next());
 
             std::cout << "calculating in-degree for all vertices" << std::endl;
             start = std::chrono::system_clock::now();
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
             end = std::chrono::system_clock::now();
             elapsed = end-start;
             std::cerr << "in-degree time: " << elapsed.count() << " seconds." << std::endl;
-            std::cout << boost::any_cast<size_t>(g.V()->has(NAME, "1000")->values("in_degree")->next());
+            std::cout << boost::any_cast<size_t>(g->V()->has(NAME, "1000")->values("in_degree")->next());
 
             std::cout << "calculating both-degree for all vertices" << std::endl;
             start = std::chrono::system_clock::now();
