@@ -134,7 +134,7 @@ int main(int charc, char* argv[]) {
         std::vector<std::pair<boost::any, size_t>> count_vec = boost::any_cast<std::vector<std::pair<boost::any, size_t>>>(g->V()->has("INFO","WhileStmt")->as("w")->repeat(__->in())->emit(__->has("INFO","IfStmt"))->select("w")->values("NAME")->groupCount()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
-        for(std::pair<boost::any, size_t> b : res) std::cout << string_any(b.first) << "=" << b.second << std::endl;
+        for(std::pair<boost::any, size_t> b : count_vec) std::cout << string_any(b.first) << "=" << b.second << std::endl;
         std::cerr << "cfg Traversal 3 Time: " << elapsed.count() << "seconds" << std::endl;
     }
 }
