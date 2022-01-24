@@ -5,6 +5,7 @@
 
 #include "structure/GPUGraph.h"
 #include "step/property/AddPropertyStep.h"
+#include "util/gremlin_utils.hpp"
 
 // only single cardinality supported
 class GPUAddPropertyStep : public TraversalStep {
@@ -38,6 +39,8 @@ class GPUAddPropertyStep : public TraversalStep {
 					// Execute traversal
 					new_trv.setInitialTraversers({Traverser(trv)});
 					boost::any prop_value = new_trv.first();
+                    std::cout  << "42" << std::endl;
+                    std::cout << "new prop: " << string_any(prop_value) << std::endl;
 
 					// Store the property; TODO deal w/ edges
                     graph->set_property(this->key, e->gpu_vertex_id, prop_value);
