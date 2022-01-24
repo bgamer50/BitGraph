@@ -112,10 +112,10 @@ int main(int charc, char* argv[]) {
     for(size_t r = 0; r < tries; ++r) {
         // Traversal 1: Find nodes whose grandparent is a class template specialization and get their types.
         std::cout << "Beginning Traversal 1..." << std::endl;
-        start = std::chrono::system_clock::now();
-        auto res = g->V()->as("s")->out()->dedup()->out()->dedup()->has("INFO", "ClassTemplateSpecializationDecl")->select("s")->values('INFO')->toVector();
-        end = std::chrono::system_clock::now();
-        elapsed = end - start;
+        auto start = std::chrono::system_clock::now();
+        auto res = g->V()->as("s")->out()->dedup()->out()->dedup()->has("INFO", "ClassTemplateSpecializationDecl")->select("s")->values("INFO")->toVector();
+        auto end = std::chrono::system_clock::now();
+        auto elapsed = end - start;
         for(boost::any b : res) std::cout << string_any(b) << std::endl;
         std::cerr << "cfg Traversal 1 Time: " << elapsed.count() << "seconds" << std::endl;
 
@@ -131,7 +131,7 @@ int main(int charc, char* argv[]) {
         // Traversal 3: For each while loop, count the number of if statements under the while loop
         std::cout << "Beginning Traversal 3..." << std::endl;
         start = std::chrono::system_clock::now();
-        auto count_vec = std::any_cast<std::vector<std::pair<boost::any, size_t>>>(g->V()->has("INFO","WhileStmt").as("w")->repeat(__->in())->emit(__->has("INFO","IfStmt"))->select("w")->values("NAME")->groupCount()->next());
+        auto count_vec = boost::any_cast<std::vector<std::pair<boost::any, size_t>>>(g->V()->has("INFO","WhileStmt").as("w")->repeat(__->in())->emit(__->has("INFO","IfStmt"))->select("w")->values("NAME")->groupCount()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         for(std::pair<boost::any, size_t> b : res) std::cout << string_any(b.first) << "=" << b.second << std::endl;
