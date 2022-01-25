@@ -9,11 +9,11 @@ GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread
 
 IFLAGS := -I. -I../gremlin++/
 
-bin/find.exe: bin/find.o
-	$(CC) $(CFLAGS) bin/find.o -o bin/find.exe $(GPULFLAGS)
+bin/deg.exe: bin/deg.o
+	$(CC) $(CFLAGS) bin/deg.o -o bin/deg.exe $(GPULFLAGS)
 
-bin/find.o: examples/find.cpp
-	$(CC) $(GPUCFLAGS) examples/find.cpp -c -o bin/find.o $(IFLAGS)
+bin/deg.o: examples/deg.cpp
+	$(CC) $(GPUCFLAGS) examples/deg.cpp -c -o bin/deg.o $(IFLAGS)
 
 bin/test_gpu.exe: bin/test_gpu.o
 	$(CC) $(CFLAGS) bin/test_gpu.o -o bin/test_gpu.exe $(GPULFLAGS)
