@@ -76,7 +76,7 @@ int main(int charc, char* argv[]) {
         start = std::chrono::system_clock::now();
         auto count = boost::any_cast<size_t>(g->V(start_vertex)->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
         auto end = std::chrono::system_clock::now();
-        auto elapsed = end - start;
+        std::chrono::duration<double> elapsed = end - start;
         std::cout << count << std::endl;
         std::cerr << "dos time: " << elapsed.count() << " seconds." << std::endl;
 
