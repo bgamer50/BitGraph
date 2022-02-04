@@ -75,14 +75,14 @@ int main(int charc, char* argv[]) {
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << std::endl;
         start = std::chrono::system_clock::now();
         auto count = boost::any_cast<size_t>(g->V(start_vertex)->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
-        end = std::chrono::system_clock::now();
-        elapsed = end - start;
+        auto end = std::chrono::system_clock::now();
+        auto elapsed = end - start;
         std::cout << count << std::endl;
         std::cerr << "dos time: " << elapsed.count() << " seconds." << std::endl;
 
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << " using repeat step" << std::endl;
         start = std::chrono::system_clock::now();
-        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(out()->dedup())->times(3)->count()->next());
+        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(__->out()->dedup())->times(3)->count()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         std::cout << count << std::endl;
