@@ -31,6 +31,7 @@ int main(int charc, char* argv[]) {
     });
     auto g = graph.traversal();
 
+    std::string start_vertex_name = "100";
     std::string filename = argv[1];
     std::string processor = argv[2];
     size_t tries = std::atol(argv[3]);
@@ -69,18 +70,19 @@ int main(int charc, char* argv[]) {
     GPUGraph gpu_graph(graph);
     g = processor == "gpu" ? gpu_graph.traversal() : graph.traversal();
 
+    Vertex* start_vertex = boost::any_cast<Vertex*>(g->V()->has(NAME, start_vertex_name)->next());
     for(size_t r = 0; r < tries; ++r) {
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << std::endl;
         start = std::chrono::system_clock::now();
-        auto count = boost::any_cast<size_t>(g->V()->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
+        auto count = boost::any_cast<size_t>(g->V(start_vertex)->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         std::cout << count << std::endl;
         std::cerr << "dos time: " << elapsed.count() << " seconds." << std::endl;
 
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << " using repeat step" << std::endl;
-        start = std::chrono::system:clock::now();
-        count = boost::any_cast<size_t>(g->V()->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
+        start = std::chrono::system_clock::now();
+        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(out()->dedup())->times(3)->count()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         std::cout << count << std::endl;
