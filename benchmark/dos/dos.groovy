@@ -54,7 +54,7 @@ while(r < tries) {
     v = g.V().has(NAME, start_v_name).next();
     println('Calculating 3 degrees of separation from vertex ' + start_v_name)
     start = now()
-    count = g.V(v).out().dedup().out().dedup().out().dedup().count()
+    count = g.V(v).out().dedup().out().dedup().out().dedup().count().next()
     end = now()
     println(count)
     elapsed = end - start
@@ -62,7 +62,7 @@ while(r < tries) {
 
     println('Calculating 3 degrees of separation from vertex ' + start_v_name + ' using repeat() step')
     start = now()
-    count = g.V(v).repeat(out().dedup()).times(3).count()
+    count = g.V(v).repeat(out().dedup()).times(3).count().next()
     end = now()
     println(count)
     elapsed = end - start
