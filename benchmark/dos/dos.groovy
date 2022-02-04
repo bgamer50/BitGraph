@@ -51,7 +51,7 @@ System.err.println('ingest time: ' + (timeDiff / 1000.0).toString() + 'seconds.'
 
 r = 0
 while(r < tries) {
-    v = g.V().has('NAME', start_v_name).next();
+    v = g.V().has(NAME, start_v_name).next();
     println('Calculating 3 degrees of separation from vertex ' + start_v_name)
     start = now()
     count = g.V(v).out().dedup().out().dedup().out().dedup().count()
