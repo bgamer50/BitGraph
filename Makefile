@@ -9,6 +9,12 @@ GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread
 
 IFLAGS := -I. -I../gremlin++/
 
+bin/dos.exe: bin/dos.o
+	$(CC) $(CFLAGS) bin/dos.o -o bin/dos.exe $(GPULFLAGS)
+
+bin/dos.o: examples/dos.cpp
+	$(CC) $(GPUCFLAGS) examples/dos.cpp -c -o bin/dos.o $(IFLAGS)
+
 bin/deg.exe: bin/deg.o
 	$(CC) $(CFLAGS) bin/deg.o -o bin/deg.exe $(GPULFLAGS)
 

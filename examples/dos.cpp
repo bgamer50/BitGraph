@@ -74,7 +74,7 @@ int main(int charc, char* argv[]) {
     for(size_t r = 0; r < tries; ++r) {
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << std::endl;
         start = std::chrono::system_clock::now();
-        auto count = boost::any_cast<size_t>(g->V(start_vertex)->out()->dedup()->out()->dedup()->out()->dedup()->count()->next());
+        auto count = boost::any_cast<size_t>(g->V(start_vertex)->both()->dedup()->both()->dedup()->both()->dedup()->count()->next());
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed = end - start;
         std::cout << count << std::endl;
@@ -82,7 +82,7 @@ int main(int charc, char* argv[]) {
 
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << " using repeat step" << std::endl;
         start = std::chrono::system_clock::now();
-        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(__->out()->dedup())->times(3)->count()->next());
+        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(__->both())->times(3)->dedup()->count()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         std::cout << count << std::endl;

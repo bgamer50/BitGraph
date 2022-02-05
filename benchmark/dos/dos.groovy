@@ -62,7 +62,7 @@ while(r < tries) {
 
     println('Calculating 3 degrees of separation from vertex ' + start_v_name + ' using repeat() step')
     start = now()
-    count = g.V(v).repeat(out().dedup()).times(3).count().next()
+    count = g.V(v).repeat(out()).times(3).dedup().count().next() // note: different semantics for repeat() than Gremlin++
     end = now()
     println(count)
     elapsed = end - start
