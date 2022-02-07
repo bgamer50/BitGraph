@@ -115,7 +115,7 @@ int main(int charc, char* argv[]) {
         auto start = std::chrono::system_clock::now();
         auto res = g->V()->as("s")->out()->dedup()->out()->dedup()->has("INFO", "ClassTemplateSpecializationDecl")->select("s")->values("INFO")->toVector();
         auto end = std::chrono::system_clock::now();
-        auto elapsed = end - start;
+        std::chrono::duration<double> elapsed = end - start;
         for(boost::any b : res) std::cout << string_any(b) << std::endl;
         std::cerr << "cfg Traversal 1 Time: " << elapsed.count() << "seconds" << std::endl;
 
