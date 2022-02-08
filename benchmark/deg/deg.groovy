@@ -54,7 +54,7 @@ while(r < tries) {
     start = now()
     g.V().property("out_degree", __.out().count()).iterate()
     end = now()
-    println(g.V().limit(10).values("out_degree").next())
+    println(g.V().limit(1).values("out_degree").next())
     elapsed = end - start
     perror('dos time: ' + (elapsed/1000.0).toString())
 
@@ -62,7 +62,7 @@ while(r < tries) {
     start = now()
     g.V().property("in_degree", __.in().count()).iterate()
     end = now()
-    println(g.V().limit(10).values("in_degree").next())
+    println(g.V().limit(1).values("in_degree").next())
     elapsed = end - start
     perror('dos time: ' + (elapsed/1000.0).toString())
 
@@ -70,7 +70,7 @@ while(r < tries) {
     start = now()
     g.V().property("both_degree", __.both().count()).iterate()
     end = now()
-    println(g.V().limit(10).values("both_degree").next())
+    println(g.V().limit(1).values("both_degree").next())
     elapsed = end - start
     perror('dos time: ' + (elapsed/1000.0).toString())
 

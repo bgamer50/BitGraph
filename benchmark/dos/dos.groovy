@@ -1,10 +1,10 @@
 perror = System.err.&println
 now = System.&currentTimeMillis
 
-start_v_name = "100";
 edges_file = args[0]
-graph_type = args[1]
-tries = Integer.parseInt(args[2])
+start_v_name = args[1];
+graph_type = args[2]
+tries = Integer.parseInt(args[3])
 EDGE_LABEL = 'basic_edge'
 LABEL_V = 'basic_vertex'
 NAME = 'name'

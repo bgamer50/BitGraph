@@ -31,10 +31,10 @@ int main(int charc, char* argv[]) {
     });
     auto g = graph.traversal();
 
-    std::string start_vertex_name = "100";
     std::string filename = argv[1];
-    std::string processor = argv[2];
-    size_t tries = std::atol(argv[3]);
+    std::string start_vertex_name = argv[2];
+    std::string processor = argv[3];
+    size_t tries = std::atol(argv[4]);
     FILE* f = fopen(filename.c_str(), "r");
 
     char id1[10];
