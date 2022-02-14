@@ -20,7 +20,7 @@ if(graph_type == 'tinkergraph') {
   throw new IllegalArgumentException('invalid graph system')
 }
 
-g = graph.traversal()
+g = graph.traversal().withComputer()
 
 scn_nodes = new Scanner(new File(nodes_file));
 scn_edges = new Scanner(new File(edges_file));

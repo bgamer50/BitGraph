@@ -19,7 +19,7 @@ if(graph_type == 'tinkergraph') {
   throw new IllegalArgumentException('invalid graph system')
 }
 
-g = graph.traversal()
+g = graph.traversal().withComputer()
 
 s = new Scanner(new File(edges_file));
 names = new HashSet<String>();
