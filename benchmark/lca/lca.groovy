@@ -51,7 +51,7 @@ r = 0
 while(r < tries) {
     // Find the lca
     start = now()
-    lca = g.V().has(NAME, voi1).
+    lca = g.withComputer().V().has(NAME, voi1).
         repeat(__.out()).emit().as("x").
         repeat(__.in()).emit(__.has(NAME, voi2)).
         select("x").limit(1).values(NAME).next()
