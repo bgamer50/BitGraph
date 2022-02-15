@@ -22,7 +22,7 @@ if(graph_type == 'tinkergraph') {
   throw new IllegalArgumentException('invalid graph system')
 }
 
-g = graph.traversal().withComputer()
+g = graph.traversal()
 
 scn_nodes = new Scanner(new File(nodes_file));
 scn_edges = new Scanner(new File(edges_file));
@@ -51,7 +51,7 @@ r = 0
 while(r < tries) {
     // Find the lca
     start = now()
-    lca = g.V().has(NAME, voi1).
+    lca = g.withComputer().V().has(NAME, voi1).
         repeat(__.out()).emit().as("x").
         repeat(__.in()).emit(__.has(NAME, voi2)).
         select("x").limit(1).values(NAME).next()
