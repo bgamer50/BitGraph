@@ -20,7 +20,7 @@ if(graph_type == 'tinkergraph') {
   throw new IllegalArgumentException('invalid graph system')
 }
 
-g = graph.traversal()
+g = graph.traversal().withComputer()
 
 s = new Scanner(new File(edges_file));
 names = new HashSet<String>();
@@ -54,7 +54,7 @@ while(r < tries) {
     v = g.V().has(NAME, start_v_name).next();
     println('Calculating 3 degrees of separation from vertex ' + start_v_name)
     start = now()
-    count = g.V(v).out().dedup().out().dedup().out().dedup().count().next()
+    count = g.withComputer().V(v).out().dedup().out().dedup().out().dedup().count().next()
     end = now()
     println(count)
     elapsed = end - start
@@ -62,7 +62,7 @@ while(r < tries) {
 
     println('Calculating 3 degrees of separation from vertex ' + start_v_name + ' using repeat() step')
     start = now()
-    count = g.V(v).repeat(out()).times(3).dedup().count().next() // note: different semantics for repeat() than Gremlin++
+    count = g.withComputer().V(v).repeat(out()).times(3).dedup().count().next() // note: different semantics for repeat() than Gremlin++
     end = now()
     println(count)
     elapsed = end - start
