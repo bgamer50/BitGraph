@@ -49,7 +49,7 @@ r = 0
 while(r < tries) {
   // Traversal 1: Find nodes whose grandparent is a class template specialization and get their types.
   start = now()
-  res = g.withComputer().V().as('s').out().dedup().out().dedup().has('INFO', "ClassTemplateSpecializationDecl").select("s").values('INFO').toList()
+  res = g.V().as('s').out().dedup().out().dedup().has('INFO', "ClassTemplateSpecializationDecl").select("s").values('INFO').toList()
   end = now()
   println(res)
   elapsed = end - start
@@ -57,7 +57,7 @@ while(r < tries) {
 
   // Traversal 2: Find the unique types of nodes between a Class template specialization and a namespace declaration
   start = now()
-  res = g.withComputer().V().has('INFO','ClassTemplateSpecialization').out().as('t').dedup().out().dedup().has('INFO','NamespaceDecl').select('t').values('INFO').dedup().toList()
+  res = g.V().has('INFO','ClassTemplateSpecialization').out().as('t').dedup().out().dedup().has('INFO','NamespaceDecl').select('t').values('INFO').dedup().toList()
   end = now()
   println(res)
   elapsed = end - start
@@ -65,7 +65,7 @@ while(r < tries) {
 
   // Traversal 3: For each while loop, count the number of if statements under the while loop
   start = now()
-  res = g.withComputer().V().has('INFO','WhileStmt').as('w').repeat(__.in()).emit(has('INFO','IfStmt')).select('w').values('NAME').groupCount().next()
+  res = g.V().has('INFO','WhileStmt').as('w').repeat(__.in()).emit(has('INFO','IfStmt')).select('w').values('NAME').groupCount().next()
   end = now()
   println(res)
   elapsed = end - start
