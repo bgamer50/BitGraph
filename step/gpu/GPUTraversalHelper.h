@@ -1,6 +1,8 @@
 #ifndef GPU_TRAVERSAL_HELPER_H
 #define GPU_TRAVERSAL_HELPER_H
 
+// These are for kernels that heavily access global memory.
+// Kernels that make better use of shared memory will have different params
 #define BLOCK_SIZE 128
 #define NUM_BLOCKS(N) ( (N + BLOCK_SIZE - 1) / BLOCK_SIZE )
 
@@ -11,6 +13,11 @@
 #include "util/cuda_utils.h"
 
 #include <cuda_runtime.h>
+
+#include <thrust/iterator/permutation_iterator.h>
+#include <thrust/copy.h>
+#include <thrust/device_ptr.h>
+#include <thrust/device_vector.h>
 
 __global__ void k_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N);
 __global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N);
@@ -264,6 +271,43 @@ __global__ void k_pick_unique(int32_t* A, size_t N, int32_t* U, int32_t* U_count
             break;
         }
     }
+}
+
+/**
+   Collapses a path down into a single output origin array.
+   traverser_info: the traverser info (contains path & other info)
+**/
+std::vector<int32_t> collapse_path(gpu_traverser_info_t& traverser_info, bool free_memory) {
+    size_t OO_size = traverser_info.paths.back().second;
+
+    int32_t* OO = traverser_info.paths.back().first;
+
+    thrust::device_ptr<int32_t> d_ptr_OO = thrust::device_pointer_cast(OO);
+    thrust::device_vector<int32_t> OO_vec(d_ptr_OO, d_ptr_OO + OO_size);
+    if(free_memory) cudaFree(OO);
+
+    for(auto it = traverser_info.paths.rbegin() + 1; it != traverser_info.paths.rend(); ++it) {
+        thrust::device_ptr<int32_t> d_ptr_previous_traversers = thrust::device_pointer_cast(it->first);
+        size_t num_previous_traversers = it->second;
+        thrust::device_vector<int32_t> previous_traversers_vec(d_ptr_previous_traversers, d_ptr_previous_traversers + num_previous_traversers);
+        if(free_memory) cudaFree(it->first);
+
+        thrust::copy(
+            thrust::make_permutation_iterator(previous_traversers_vec.begin(), OO_vec.begin()),
+            thrust::make_permutation_iterator(previous_traversers_vec.begin(), OO_vec.end()),
+            OO_vec.begin()
+        );
+
+        previous_traversers_vec.clear();
+    }
+
+    std::vector<int32_t> returned_oo_cpu;
+    returned_oo_cpu.reserve(OO_size);
+
+    thrust::copy(OO_vec.begin(), OO_vec.end(), returned_oo_cpu.begin());
+    OO_vec.clear();
+
+    return returned_oo_cpu;
 }
 
 #endif

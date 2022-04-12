@@ -26,35 +26,9 @@ class GPUUnbindStep : public TraversalStep {
                         continue;
                     }
 
+                    std::vector<int32_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
                     std::vector<int32_t> new_traversed_vertices(traverser_info.num_traversers);
-                    std::vector<int32_t> originating_traversers(traverser_info.num_traversers);
                     cudaMemcpy(new_traversed_vertices.data(), traverser_info.traversers, sizeof(int32_t) * traverser_info.num_traversers, cudaMemcpyDeviceToHost);
-                    cudaMemcpy(originating_traversers.data(), traverser_info.paths.back().first, sizeof(int32_t) * traverser_info.num_traversers, cudaMemcpyDeviceToHost);
-                    cudaDeviceSynchronize();
-                    cudaCheckErrors("copy traverser data");
-                    //std::cout << "copied data from device" << std::endl;
-
-                    // Free the copied device objects
-                    if(this->free_gpu_memory) {
-                        cudaFree(traverser_info.traversers);
-                        cudaFree(traverser_info.paths.back().first);
-                    }
-                    //std::cout << "end of path:" << std::endl;
-                    //for(auto z : originating_traversers) std::cout << z << std::endl;
-
-                    for(auto it = traverser_info.paths.rbegin() + 1; it != traverser_info.paths.rend(); ++it) {
-                        //std::cout << "processing path" << std::endl;
-                        int32_t* d_ptr_previous_traversers = it->first;
-                        size_t num_previous_traversers = it->second;
-
-                        std::vector<int32_t> previous_traversers(num_previous_traversers);
-                        //std::cout << "num prev traversers: " <<  num_previous_traversers << std::endl;
-                        cudaMemcpy(previous_traversers.data(), d_ptr_previous_traversers, sizeof(int32_t) * num_previous_traversers, cudaMemcpyDeviceToHost);
-                        if(this->free_gpu_memory) cudaFree(d_ptr_previous_traversers);
-
-                        for(size_t k = 0; k < originating_traversers.size(); ++k) originating_traversers[k] = previous_traversers[originating_traversers[k]];
-                        //std::cout << "path processed!" << std::endl;
-                    }
 
                     GPUGraph* gpu_graph = static_cast<GPUGraph*>(parent_traversal->getGraph());
                     
