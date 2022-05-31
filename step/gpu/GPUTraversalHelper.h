@@ -15,11 +15,18 @@
 #include <cuda_runtime.h>
 
 #include <thrust/iterator/permutation_iterator.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
+#include <thrust/iterator/constant_iterator.h>
 #include <thrust/copy.h>
+#include <thrust/scan.h>
 #include <thrust/device_ptr.h>
 #include <thrust/device_vector.h>
+#include <thrust/functional.h>
+#include <thrust/tuple.h>
 
 __global__ void k_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N);
+void t_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N);
 __global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N);
 __global__ void k_prefix_sum(int32_t* A, int32_t* B, int i, int N);
 __global__ void k_pick_unique_trim(int32_t* V, int32_t* V_ptr, int32_t* U, int32_t* U_counts, size_t U_offset, size_t U_size);
@@ -81,6 +88,7 @@ std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix
     
     cudaMalloc((void**) &result, sizeof(int32_t) * N);
     k_quadvv_get_mem<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(M.row_ptr, gpu_element_traversers, result, N);
+    //t_quadvv_get_mem(M.row_ptr, gpu_element_traversers, result, N);
     cudaDeviceSynchronize();
     cudaCheckErrors("k_quadvv_get_mem");
 
@@ -123,6 +131,60 @@ __global__ void k_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N
     }
 }
 
+struct plus_op : public thrust::unary_function<thrust::tuple<int32_t,int32_t>,int32_t> {
+    __device__ int32_t operator()(thrust::tuple<int32_t, int32_t> t) const {
+        return thrust::get<0>(t) + thrust::get<1>(t);
+    }
+};
+
+struct minus_op : public thrust::unary_function<thrust::tuple<int32_t,int32_t>,int32_t> {
+    __device__ int32_t operator()(thrust::tuple<int32_t, int32_t> t) const {
+        return thrust::get<0>(t) - thrust::get<1>(t);
+    }
+};
+
+void t_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N) {
+    thrust::device_ptr<int32_t> row_dptr = thrust::device_pointer_cast(row_ptr);
+    thrust::device_ptr<int32_t> T_dptr = thrust::device_pointer_cast(T);
+
+    thrust::constant_iterator<int32_t> single = thrust::make_constant_iterator<int32_t>(1);
+
+    auto T_plus_one = thrust::make_transform_iterator(
+            thrust::make_zip_iterator(
+                thrust::make_tuple(T_dptr, single)
+            ),
+            plus_op()
+    );
+
+    auto zip_begin = thrust::make_zip_iterator(
+        thrust::make_tuple(
+            thrust::make_permutation_iterator(
+                row_dptr,
+                T_plus_one
+            ),
+            thrust::make_permutation_iterator(
+                row_dptr,
+                T_dptr
+            )
+        )
+    );
+
+    auto zip_end = thrust::make_zip_iterator(
+        thrust::make_tuple(
+            thrust::make_permutation_iterator(
+                row_dptr,
+                T_plus_one + N
+            ),
+            thrust::make_permutation_iterator(
+                row_dptr,
+                T_dptr + N
+            )
+        )
+    );
+
+    thrust::copy(thrust::make_transform_iterator(zip_begin, minus_op()), thrust::make_transform_iterator(zip_end, minus_op()), thrust::device_pointer_cast(R));
+}
+
 /**
     M: (row_ptr, col_ptr) adjacency matrix
     T: intial traversers
@@ -150,7 +212,32 @@ __global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T,
     }
 }
 
+// gridDim.x * blockDim.x = # traversers
+// blockDim.y = max degree
+/*
+__global__ void k_quadvv_get_adj_v2(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N, int M, int nnz) {
+    extern __shared__ int32_t s[];
+
+    int index = gridDim.x * blockIdx.x + blockDim.x * threadIdx.x + threadIdx.y;
+    int vertex = T[i];
+    int output_index = i==0 ? 0 : ps[i - 1]; // TODO might be able to put this in shared memory
+
+    s[0] = row_ptr[vertex];
+    s[1] = row_ptr[vertex + 1];
+
+    
+}
+*/
+
+void t_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N, int M, int nnz) {
+
+}
+
 void prefix_sum(int32_t** A_ptr, int N) {
+    //thrust::device_ptr<int32_t> A_dptr = thrust::device_pointer_cast(*A_ptr);
+    //thrust::inclusive_scan(A_dptr, A_dptr+N, A_dptr);
+    
+
     int32_t* A = *A_ptr;
     int32_t* temp;
     cudaMalloc((void**) &temp, sizeof(int32_t) * N);
@@ -164,6 +251,8 @@ void prefix_sum(int32_t** A_ptr, int N) {
 
     cudaFree(temp);
     *A_ptr = A;
+    
+    
 }
 
 /**
@@ -283,30 +372,23 @@ std::vector<int32_t> collapse_path(gpu_traverser_info_t& traverser_info, bool fr
     int32_t* OO = traverser_info.paths.back().first;
 
     thrust::device_ptr<int32_t> d_ptr_OO = thrust::device_pointer_cast(OO);
-    thrust::device_vector<int32_t> OO_vec(d_ptr_OO, d_ptr_OO + OO_size);
-    if(free_memory) cudaFree(OO);
 
     for(auto it = traverser_info.paths.rbegin() + 1; it != traverser_info.paths.rend(); ++it) {
         thrust::device_ptr<int32_t> d_ptr_previous_traversers = thrust::device_pointer_cast(it->first);
         size_t num_previous_traversers = it->second;
-        thrust::device_vector<int32_t> previous_traversers_vec(d_ptr_previous_traversers, d_ptr_previous_traversers + num_previous_traversers);
-        if(free_memory) cudaFree(it->first);
 
         thrust::copy(
-            thrust::make_permutation_iterator(previous_traversers_vec.begin(), OO_vec.begin()),
-            thrust::make_permutation_iterator(previous_traversers_vec.begin(), OO_vec.end()),
-            OO_vec.begin()
+            thrust::make_permutation_iterator(d_ptr_previous_traversers, d_ptr_OO),
+            thrust::make_permutation_iterator(d_ptr_previous_traversers, d_ptr_OO + OO_size),
+            d_ptr_OO
         );
 
-        previous_traversers_vec.clear();
+        if(free_memory) cudaFree(it->first);
     }
 
-    std::vector<int32_t> returned_oo_cpu;
-    returned_oo_cpu.reserve(OO_size);
-
-    thrust::copy(OO_vec.begin(), OO_vec.end(), returned_oo_cpu.begin());
-    OO_vec.clear();
-
+    std::vector<int32_t> returned_oo_cpu(OO_size);
+    cudaMemcpy(returned_oo_cpu.data(), OO, sizeof(int32_t) * OO_size, cudaMemcpyDeviceToHost);
+    if(free_memory) cudaFree(OO);
     return returned_oo_cpu;
 }
 
