@@ -19,7 +19,7 @@ enum IndexType {VERTEX_INDEX, EDGE_INDEX};
 class CPUGraph : public Graph {
 	private:
 		std::vector<Vertex*> vertex_list = std::vector<Vertex*>(CPUGRAPH_INITIAL_LIST_SIZE);
-		std::list<Edge*> edge_list;
+		std::vector<Edge*> edge_list;
 		std::unordered_map<std::string, Index*> vertex_index;
 		std::unordered_map<uint64_t, Vertex*> vertex_id_map;
 		uint64_t next_edge_id = 0;
@@ -33,12 +33,10 @@ class CPUGraph : public Graph {
 		CPUGraph(): Graph() {}
 
 		/*
-			The list containing the CPUGraph's vertices.
-			TODO may want to optimize this or switch to vector.
+			A copy of the vector containing the CPUGraph's vertices.
 		*/
-		std::list<Vertex*> vertices() { 
-			std::list<Vertex*> view;
-			for(int k = 0; k < num_vertices; ++k) view.push_back(vertex_list[k]);
+		std::vector<Vertex*> vertices() { 
+			std::vector<Vertex*> view(this->vertex_list.begin(), this->vertex_list.begin() + this->num_vertices);
 			return view; 
 		}
 
@@ -52,11 +50,15 @@ class CPUGraph : public Graph {
 		}
 
 		uint64_t numVertices() { return this->num_vertices; }
+		uint64_t numEdges() { return this->edge_list.size(); }
 
 		/*
 			The list containing the CPUGraph's edges.
 		*/
-		std::list<Edge*>& edges() { return edge_list; }
+		std::vector<Edge*> edges() { 
+			std::vector<Edge*> view(this->edge_list);
+			return view;
+		}
 
 		/*
 			Adds a new Vertex (w/label) to this CPUGraph.
@@ -95,7 +97,7 @@ class CPUGraph : public Graph {
 		}
 };
 
-#define NEXT_VERTEX_ID_CPU() ( (uint64_t)( next_vertex_id++ ))
+#define NEXT_VERTEX_ID_CPU() ((uint64_t)( next_vertex_id++ ))
 #define NEXT_EDGE_ID_CPU() ((uint64_t)( next_edge_id++ ))
 
 #include "traversal/CPUGraphTraversalSource.h"
@@ -118,7 +120,7 @@ Vertex* CPUGraph::add_vertex(std::string label) {
 
 	Vertex* v = new BitVertex(this, NEXT_VERTEX_ID_CPU(), label);
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
-	vertex_list[this->num_vertices++] = v;
+	vertex_list[this->num_vertices++] = v; // TODO this makes deletion impossible
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }
@@ -131,7 +133,7 @@ Vertex* CPUGraph::add_vertex() {
 
 	Vertex* v = new BitVertex(this, NEXT_VERTEX_ID_CPU());
 	uint64_t id_val = boost::any_cast<uint64_t>(v->id());
-	vertex_list[this->num_vertices++] = v;
+	vertex_list[this->num_vertices++] = v; // TODO this makes deletion impossible
 	vertex_id_map.insert(std::pair<uint64_t, Vertex*>{id_val, v});
 	return v;
 }

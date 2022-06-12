@@ -44,14 +44,16 @@ class BitVertex : public Vertex {
 		// Boolean whether or not it has a label
 		bool has_label;
 
-		// The properties
-		std::unordered_map<std::string, VertexProperty<boost::any>*> my_properties;
+		// The properties - currently can't support list/set per breaking API changes
+		std::unordered_map<std::string, VertexProperty*> my_properties;
 
 		// Mutex that prevents concurrent edge addition
 		//std::mutex add_edge_mutex;
 
 		// Mutex that prevents concurrent property addition
 		//std::mutex add_prop_mutex;
+
+		// Who needs thread safety anyways?
 
 	public:
 		BitVertex(CPUGraph* graph, uint64_t vid) {
@@ -91,7 +93,7 @@ class BitVertex : public Vertex {
 			no label for the Vertex
 		*/
 		virtual std::string label() {
-			return has_label ? std::string(vertex_label) : NULL;
+			return has_label ? std::string(vertex_label) : "";
 		}
 
 		/*
@@ -127,15 +129,13 @@ class BitVertex : public Vertex {
 				case IN: {
 					return std::vector<Edge*>{this->edges_in.begin(), this->edges_in.end()};
 				}
-				case BOTH: {
+				case BOTH: 
+				default: {
 					std::vector<Edge*> both_edges;
 					both_edges.insert(both_edges.end(), this->edges_in.begin(), this->edges_in.end());
 					both_edges.insert(both_edges.end(), this->edges_out.begin(), this->edges_out.end());
 
 					return both_edges;
-				}
-				default: {
-					// should never occur
 				}
 			}
 		}
@@ -143,39 +143,58 @@ class BitVertex : public Vertex {
 		/*
 			Get the property with the given key.
 		*/		
-		virtual VertexProperty<boost::any>* property(std::string key) {
+		virtual Property* property(std::string key) {
 			auto v = this->my_properties.find(key);
 			if(v == my_properties.end()) return nullptr;
 			return v->second;
 		}
 
 		/*
+			Get all the properties with the given keys.
+			Should support multiproperties if available.
+		*/
+		virtual std::vector<Property*> properties(std::vector<std::string> keys) {
+			std::vector<Property*> props;
+			if(keys.empty()) {
+				props.resize(this->my_properties.size());
+				size_t i = 0;
+				for(std::pair<std::string, VertexProperty*> p : this->my_properties) props[i++] = p.second;
+			} 
+			else {
+				props.resize(keys.size());
+				size_t i = 0;
+				for(std::string& key : keys) props[i++] = this->property(key);
+			}
+
+			return props;
+		}
+
+		/*
 			Set the property with the given key to the given value.
 		*/
-		virtual VertexProperty<boost::any>* property(Cardinality card, std::string key, boost::any& value) {
+		virtual Property* property(Cardinality card, std::string key, boost::any& value) {
 			auto old_prop = this->my_properties.find(key);
 			
 			// Update the indexes if necessary.
 			if(this->graph->is_indexed(key)) {
+				/*
+				If the cardinality is single and there is already an entry for it,
+				then clear the index.
+				*/
 				if(card == SINGLE && old_prop != this->my_properties.end()) {
 					this->graph->clear_index(this, key, old_prop->second->value());
 				}
+
+				// Perform the index update.  This should be fine for set cardinality.
 				graph->update_index(this, key, value);
 
 			}
 
 			if(card == SINGLE) {
-				this->my_properties[key] = new VertexProperty<boost::any>(SINGLE, key, {value});
+				this->my_properties[key] = new VertexProperty(key, value);
 			}
-			else if(card == SET || card == LIST) { //TODO this is incorrect
-				if(old_prop != this->my_properties.end()) {
-					std::vector<boost::any> vals = old_prop->second->values();
-					vals.push_back(value);
-					this->my_properties[key] = new VertexProperty<boost::any>(card, key, vals);
-				}
-				else {
-					this->my_properties[key] = new VertexProperty<boost::any>(card, key, {value});
-				}
+			else if(card == SET || card == LIST) { //TODO support list/set
+				throw std::runtime_error("Multiproperties currently unsupported!");
 			}
 			else {
 				throw std::runtime_error("Illegal cardinality!");
@@ -187,8 +206,12 @@ class BitVertex : public Vertex {
 		/*
 			Set the property with the given key to the given value.
 		*/
-		virtual VertexProperty<boost::any>* property(std::string key, boost::any& value) {
+		virtual Property* property(std::string key, boost::any& value) {
 			return this->property(SINGLE, key, value);
+		}
+
+		virtual std::vector<Property*> properties() {
+			return this->properties({});
 		}
 };
 

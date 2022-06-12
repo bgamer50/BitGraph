@@ -4,15 +4,17 @@
 #include "strategy/TraversalStrategy.h"
 #include "step/graph/GraphStep.h"
 #include "step/vertex/VertexStep.h"
-#include "step/IndexStep.h"
-#include "step/HasWithIndexStep.h"
+#include "step/cpu/IndexStep.h"
+#include "step/cpu/HasWithIndexStep.h"
+#include "step/graph/SubgraphExtractionStep.h"
+#include "step/cpu/CPUSubgraphExtractionStep.h"
 
 class CPUGraph;
 
 void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps);
 
 #include "structure/CPUGraph.h"
-#include "step/BitGraphStep.h"
+#include "step/cpu/BitGraphStep.h"
 
 void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {
     if(steps[0]->uid == GRAPH_STEP) {
@@ -33,6 +35,10 @@ void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {
 						steps[0] = index_list_step;
 						delete steps[1];
 						steps.erase(steps.begin() + 1);
+					}
+					else {
+						BitGraphStep* bitgraph_step = new BitGraphStep(true, graph_step->getType(), graph_step->get_element_ids());
+						steps[0] = bitgraph_step;
 					}
 				}
 				else {
@@ -59,6 +65,11 @@ void bitgraph_strategy(CPUGraph* bg, std::vector<TraversalStep*>& steps) {
 			GraphStep* graph_step = static_cast<GraphStep*>(current_step);
 			BitGraphStep* bitgraph_step = new BitGraphStep(false, graph_step->getType(), graph_step->get_element_ids());
 			*it = bitgraph_step;
+		} else if(current_step->uid == SUBGRAPH_EXTRACTION_STEP) {
+			SubgraphExtractionStep* subgraph_extraction_step = static_cast<SubgraphExtractionStep*>(current_step);
+			CPUSubgraphExtractionStep* cpu_subgraph_extraction_step = new CPUSubgraphExtractionStep(subgraph_extraction_step->get_subgraph_name());
+			*it = cpu_subgraph_extraction_step;
+			delete current_step;
 		}
 	}
 }
