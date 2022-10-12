@@ -145,6 +145,8 @@ class GPUGraph : public Graph {
                 case BOTH: 
                     return this->get_both_adjacency_matrix();
             }
+
+            throw std::runtime_error("Illegal direction provided to get_adjacency_matrix");
         }
 
         sparse_matrix_device_t& access_adjacency_matrix() {

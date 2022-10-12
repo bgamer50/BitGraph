@@ -40,6 +40,7 @@ class GPUPropertyStep: public TraversalStep {
             traversers.swap(new_traversers);
         }
 
+        using TraversalStep::getInfo;
         virtual std::string getInfo() {
             return "GPUPropertyStep{}";
         }

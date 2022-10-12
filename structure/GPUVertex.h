@@ -36,8 +36,12 @@ class GPUVertex : public Vertex {
         virtual boost::any id();
         virtual std::string label();
         virtual std::vector<Edge*> edges(Direction dir);
+
+        using Vertex::property;
         virtual Property* property(std::string key);
         virtual Property* property(Cardinality cardinality, std::string key, boost::any& value);
+
+        using Vertex::properties;
         virtual std::vector<Property*> properties(std::vector<std::string> keys);
 
 };

@@ -101,6 +101,9 @@ std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix
     cudaMalloc((void**) &output, sizeof(int32_t) * N_prime);
     cudaMalloc((void**) &output_origin, sizeof(int32_t) * N_prime);
 
+    //std::cout << "num traversers: " << N << std::endl;
+    //std::cout << "num blocks: " << NUM_BLOCKS(N) << std::endl;
+
     // Then we run a kernel that actually spits out the column #s (a.k.a. adjacent vertices in the out-direction, or in-direction if this matrix has been transposed)
     k_quadvv_get_adj<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(M.row_ptr, M.col_ptr, gpu_element_traversers, result, output, output_origin, N);
     cudaDeviceSynchronize();
