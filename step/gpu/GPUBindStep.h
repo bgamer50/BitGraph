@@ -38,6 +38,7 @@ class GPUBindStep : public TraversalStep {
             traversers.push_back(Traverser(traverser_info));
         }
 
+        using TraversalStep::getInfo;
         virtual std::string getInfo() {
             return "GPUBindStep{}";
         }

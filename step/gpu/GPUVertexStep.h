@@ -82,8 +82,9 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
         traversers.front().replace_data(traverser_info);
     } else {
         // (outV id, inV id) -> (originating traverser)
-        std::pair<std::pair<int32_t*, int32_t*>, int32_t*> new_gpu_traversers;
-        gpu_query_adjacency_v_to_e(adjacency_matrix, gpu_element_traversers);
+        //std::pair<std::pair<int32_t*, int32_t*>, int32_t*> new_gpu_traversers;
+        //gpu_query_adjacency_v_to_e(adjacency_matrix, gpu_element_traversers);
+        throw std::runtime_error("Vertex to edge query currently unsupported");
     }
 }
 

@@ -4,7 +4,9 @@
 #define GPU_ADD_PROPERTY_STEP 0x22
 
 #include "structure/GPUGraph.h"
+#include "traversal/Scope.h"
 #include "step/property/AddPropertyStep.h"
+
 #include "util/gremlin_utils.hpp"
 
 // only single cardinality supported
@@ -29,19 +31,29 @@ class GPUAddPropertyStep : public TraversalStep {
 
 			if(this->value.type() == typeid(GraphTraversal*)) {
 				GraphTraversal* ap_anonymous_trv = boost::any_cast<GraphTraversal*>(value);
+				auto& eid_type = boost::any_cast<Vertex*>(traversers.front().get())->id().type();
 				
-                // for each current traverser in the traversal...
+				for(TraversalStep* step : ap_anonymous_trv->getSteps()) if(step->uid == MIN_STEP) {
+					MinStep* min_step = static_cast<MinStep*>(step);
+					min_step->set_scope_context(ScopeContext{Scope::local, ADD_PROPERTY_STEP_SIDE_EFFECT_KEY});
+				}
+				
 				for(Traverser& trv : traversers) {
-                    //Element* e = get_element(trv->get());
-					GPUVertex* e = static_cast<GPUVertex*>(boost::any_cast<Vertex*>(trv.get())); // allow only traversal of vertices for now
-					GraphTraversal new_trv(current_traversal->getTraversalSource(), ap_anonymous_trv);
-					
-					// Execute traversal
-					new_trv.setInitialTraversers({Traverser(trv)});
-					boost::any prop_value = new_trv.first();
+					boost::any v_id = boost::any_cast<Vertex*>(trv.get())->id();
+					trv.get_side_effects()[ADD_PROPERTY_STEP_SIDE_EFFECT_KEY] = group_id_from_any(v_id);
+				}
 
-					// Store the property; TODO deal w/ edges
-                    graph->set_property(this->key, e->gpu_vertex_id, prop_value);
+                TraverserSet temp_traversers(traversers.begin(), traversers.end());
+				GraphTraversal new_trv(current_traversal->getTraversalSource(), ap_anonymous_trv);
+				new_trv.setInitialTraversers(temp_traversers);
+				new_trv.iterate();
+                
+				for(Traverser& trv : new_trv.getTraversers()) {
+					scope_group_t g_id = boost::any_cast<scope_group_t>(trv.get_side_effects()[ADD_PROPERTY_STEP_SIDE_EFFECT_KEY]);
+					boost::any prop_value = trv.get();
+					auto v_id = boost::any_cast<uint64_t>(any_from_group_id(g_id, eid_type));
+                    GPUVertex* gpu_v = static_cast<GPUVertex*>(graph->get_vertex_with_cpu_id(v_id));
+                    graph->set_property(this->key, gpu_v->gpu_vertex_id, prop_value);
 				}
 			} 
 			else {
@@ -50,13 +62,13 @@ class GPUAddPropertyStep : public TraversalStep {
 					GPUVertex* e = static_cast<GPUVertex*>(boost::any_cast<Vertex*>(trv.get()));
                     graph->set_property(this->key, e->gpu_vertex_id, this->value);
 				});
-				//std::cout << "property stored!\n";
 			}
 
 			// Traversers aren't modified in this step.
 		}
 
-        std::string getInfo() {
+        using TraversalStep::getInfo;
+        virtual std::string getInfo() {
             return "GPUAddPropertyStep{" + key + "}";
         }
 };

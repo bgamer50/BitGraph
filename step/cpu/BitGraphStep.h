@@ -62,6 +62,7 @@ class BitGraphStep: public GraphStep {
             traversers.swap(new_traversers);
         }
 
+        using TraversalStep::getInfo;
         virtual std::string	getInfo() {
 			std::string info = "BitGraphStep(";
 			info = info + (this->element_ids.size() > 0 ? "{...}" : "{}");

@@ -4,6 +4,8 @@
 #include <ctime>
 #include <unordered_set>
 
+#include <cuda_profiler_api.h>
+
 #include "traversal/GraphTraversal.h"
 #include "structure/Graph.h"
 #include "structure/CPUGraph.h"
@@ -79,6 +81,7 @@ int main(int argc, char* argv[]) {
 
     for(size_t r = 0; r < tries; ++r) {
         try {
+            cudaProfilerStart();
             start = std::chrono::system_clock::now();
 
             h->V()->property("cc", __->id())->iterate();
@@ -100,6 +103,7 @@ int main(int argc, char* argv[]) {
                 std::cout << "diff: " << diff << std::endl;
             }
             end = std::chrono::system_clock::now();
+            cudaProfilerStop();
             elapsed = end-start;
             std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
             std::unordered_set<int> comp_set;

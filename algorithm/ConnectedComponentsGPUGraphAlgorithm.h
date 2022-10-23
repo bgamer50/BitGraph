@@ -48,7 +48,6 @@ std::unordered_map<std::string, boost::any> ConnectedComponentsGPUGraphAlgorithm
     cudaDeviceSynchronize();
     cudaCheckErrors("init old cc");
     
-    size_t num_edges = adjacency_matrix.nnz;
     int32_t diff = 1;
     while(diff > 0) {
         cudaMemcpy(new_cc, old_cc, sizeof(int32_t) * adjacency_matrix.num_rows, cudaMemcpyDeviceToDevice);

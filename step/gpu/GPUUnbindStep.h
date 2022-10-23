@@ -54,6 +54,7 @@ class GPUUnbindStep : public TraversalStep {
             //std::cout << "leave unbind step " << std::endl;
         }
 
+        using TraversalStep::getInfo;
         virtual std::string getInfo() {
             return "GPUUnbindStep{}";
         }
