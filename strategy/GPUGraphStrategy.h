@@ -53,7 +53,8 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 
 				GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type(), dedup);
 				if(!gpu_vertex_step->chained) {
-					it = steps.insert(it, new GPUBindStep()) + 1;
+					auto dtype = gremlinxx::comparison::C::VERTEX;
+					it = steps.insert(it, new GPUBindStep(dtype)) + 1;
 					it = steps.insert(it + 1, new GPUUnbindStep()) - 1;
 					gpu_vertex_step->chained = true;
 				}
@@ -99,7 +100,7 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 
 					gpugraph_strategy(action_steps);
 					if(action_steps.front()->uid == GPU_BIND_STEP && action_steps.back()->uid == GPU_UNBIND_STEP) {
-						it = steps.insert(it, new GPUBindStep()) + 1;
+						it = steps.insert(it, action_steps.front()) + 1;
 						it = steps.insert(it + 1, new GPUUnbindStep()) - 1;
 
 						action_steps.erase(action_steps.begin());

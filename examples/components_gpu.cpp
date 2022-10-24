@@ -7,10 +7,10 @@
 #include <cuda_profiler_api.h>
 
 #include "traversal/GraphTraversal.h"
+#include "traversal/Comparison.h"
 #include "structure/Graph.h"
 #include "structure/CPUGraph.h"
 #include "structure/GPUGraph.h"
-#include "util/C.h"
 #include "util/gremlin_utils.hpp"
 
 #define LABEL_V "basic_vertex"
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
                     h->V()
                     ->property("old_cc", __->values("cc"))
                     ->property("cc", 
-                        __->_union({__->both()->values("old_cc"), __->values("old_cc")})->min(C<uint64_t>::compare())
+                        __->_union({__->both()->values("old_cc"), __->values("old_cc")})->min<uint64_t>()
                     )
                     ->valueMap({"cc","old_cc"})->by(__->unfold())
                     ->where("cc", P::neq("old_cc"))

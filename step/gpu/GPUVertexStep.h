@@ -36,16 +36,24 @@ class GPUVertexStep : public TraversalStep {
 #include "structure/GPUGraph.h"
 #include "structure/matrix/GPUSparseMatrixWrapper.h"
 #include "step/gpu/GPUTraversalHelper.h"
+#include "traversal/Comparison.h"
 #include <cuda_runtime.h>
 
 void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
     gpu_traverser_info_t traverser_info = boost::any_cast<gpu_traverser_info_t>(traversers.front().get());
-    int32_t* gpu_element_traversers = traverser_info.traversers;
+    int32_t* gpu_element_traversers = static_cast<int32_t*>(traverser_info.traversers);
 
     // short-circuit if there are no traversers
     if(traverser_info.num_traversers == 0) {
         traversers.clear();
         return;
+    }
+
+    if(traverser_info.traverser_dtype != gremlinxx::comparison::VERTEX) {
+        std::stringstream ss;
+        ss << "Encountered an illegal traverser type for VertexStep: ";
+        ss << gremlinxx::comparison::C_to_string[traverser_info.traverser_dtype];
+        throw std::runtime_error(ss.str());
     }
 
     GPUGraph* gpu_graph = static_cast<GPUGraph*>(traversal->getGraph());

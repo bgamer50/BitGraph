@@ -5,7 +5,7 @@ CUDALIB := /usr/local/cuda/lib64
 
 GPUCC :=  /usr/local/cuda/bin/nvcc
 GPUCFLAGS := -forward-unknown-to-host-compiler -O3 --std=c++17 -x cu -funsafe-math-optimizations -frename-registers -funroll-loops -fsized-deallocation -fopenmp #-g -pg -no-pie
-GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread -ltbb
+GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread #-ltbb
 
 IFLAGS := -I. -I../gremlin++/ -I${CONDA_PREFIX}/include
 

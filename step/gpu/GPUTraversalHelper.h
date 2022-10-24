@@ -1,5 +1,4 @@
-#ifndef GPU_TRAVERSAL_HELPER_H
-#define GPU_TRAVERSAL_HELPER_H
+#pragma once
 
 // These are for kernels that heavily access global memory.
 // Kernels that make better use of shared memory will have different params
@@ -8,6 +7,7 @@
 
 #include <inttypes.h>
 #include "traversal/Traverser.h"
+#include "traversal/Comparison.h"
 #include "structure/GPUVertex.h"
 #include "structure/GPUEdge.h"
 #include "util/cuda_utils.h"
@@ -32,23 +32,53 @@ __global__ void k_prefix_sum(int32_t* A, int32_t* B, int i, int N);
 __global__ void k_pick_unique_trim(int32_t* V, int32_t* V_ptr, int32_t* U, int32_t* U_counts, size_t U_offset, size_t U_size);
 __global__ void k_pick_unique(int32_t* A, size_t N, int32_t* U, int32_t* U_counts, int32_t U_offset, size_t U_size);
 
-int32_t* to_gpu(TraverserSet& traversers);
 void prefix_sum(int32_t** A_ptr, int N);
 std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N);
 std::pair<std::pair<int32_t*, int32_t*>, int32_t*> gpu_query_adjacency_v_to_e(sparse_matrix_device_t& M, int32_t* gpu_element_traversers);
 
 typedef struct gpu_traverser_info {
-    int32_t* traversers;
+    void* traversers;
     size_t num_traversers;
+    gremlinxx::comparison::C traverser_dtype;
     TraverserSet original_traversers;
     std::vector<std::pair<int32_t*, size_t>> paths;
 } gpu_traverser_info_t;
+
+enum reduction_type{MIN, MAX, SUM, MUL};
 
 /**
     Copy data from a traversal over graph elements (Vertex,Edge)
     to the GPU.
 **/
-int32_t* to_gpu(TraverserSet& traversers) {
+template<typename T>
+void* to_gpu(TraverserSet& traversers) {
+    const size_t sz = traversers.size();
+
+    T* gpu_traversers;
+    cudaMalloc((void**) &gpu_traversers, sizeof(T) * sz);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("allocate traversers");
+
+    std::vector<T> trv(sz); 
+    for(size_t k = 0; k < sz; ++k) {
+        try {
+            trv[k] = boost::any_cast<T>(traversers[k].get());
+        } catch(boost::bad_any_cast& ex) {
+            std::stringstream ss;
+            ss << ex.what() << std::endl;
+            ss << "unexpected type: " << boost::core::demangled_name(traversers[k].get().type()) << std::endl;
+            throw std::runtime_error(ss.str());
+        }
+    } 
+    
+    cudaMemcpy(gpu_traversers, trv.data(), sizeof(int32_t) * sz, cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("copy traversers to device");
+    return (void*)gpu_traversers;
+}
+
+template<>
+void* to_gpu<Vertex*>(TraverserSet& traversers) {
     const size_t sz = traversers.size();
 
     int32_t* gpu_traversers;
@@ -58,21 +88,65 @@ int32_t* to_gpu(TraverserSet& traversers) {
 
     std::vector<int32_t> trv(sz); 
     for(size_t k = 0; k < sz; ++k) {
-        boost::any e = traversers[k].get();
-        if(typeid(Vertex*) == e.type()) {
-            trv[k] = static_cast<GPUVertex*>(boost::any_cast<Vertex*>(e))->gpu_vertex_id;
-        } else if(typeid(Edge*) == e.type()) {
-            throw std::runtime_error("GPU Traversal over edges currently unsupported due to GPU identifier requirements.");
-            //trv[k] = static_cast<GPUEdge*>(boost::any_cast<Edge*>(e))->gpu_edge_id;
-        } else {
-            throw std::runtime_error("Type not supported for GPU traversal!");
+        try {
+            Vertex* v = boost::any_cast<Vertex*>(traversers[k].get());
+            GPUVertex* gv = static_cast<GPUVertex*>(v);
+            trv[k] = gv->gpu_vertex_id;
+        } catch(boost::bad_any_cast& ex) {
+            std::stringstream ss;
+            ss << ex.what() << std::endl;
+            ss << "expected a Vertex" << std::endl;
+            ss << "but got: " << boost::core::demangled_name(traversers[k].get().type()) << std::endl;
+            throw std::runtime_error(ss.str());
         }
     } 
     
     cudaMemcpy(gpu_traversers, trv.data(), sizeof(int32_t) * sz, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
     cudaCheckErrors("copy traversers to device");
-    return gpu_traversers;
+    return (void*)gpu_traversers;
+}
+
+template
+void* to_gpu<uint64_t>(TraverserSet& traversers);
+template
+void* to_gpu<uint32_t>(TraverserSet& traversers);
+template
+void* to_gpu<uint8_t>(TraverserSet& traversers);
+template
+void* to_gpu<int64_t>(TraverserSet& traversers);
+template
+void* to_gpu<int32_t>(TraverserSet& traversers);
+template
+void* to_gpu<int8_t>(TraverserSet& traversers);
+template
+void* to_gpu<float>(TraverserSet& traversers);
+template
+void* to_gpu<double>(TraverserSet& traversers);
+
+void* C_TO_GPU(gremlinxx::comparison::C c, TraverserSet& traversers) {
+    switch(c) {
+        case gremlinxx::comparison::C::UINT64:
+            return to_gpu<uint64_t>(traversers);
+        case gremlinxx::comparison::C::UINT32:
+            return to_gpu<uint32_t>(traversers);
+        case gremlinxx::comparison::C::UINT8:
+            return to_gpu<uint8_t>(traversers);
+        case gremlinxx::comparison::C::INT64:
+            return to_gpu<int64_t>(traversers);
+        case gremlinxx::comparison::C::INT32:
+            return to_gpu<int32_t>(traversers);
+        case gremlinxx::comparison::C::INT8:
+            return to_gpu<int8_t>(traversers);
+        case gremlinxx::comparison::C::FLOAT64:
+            return to_gpu<double>(traversers);
+        case gremlinxx::comparison::C::FLOAT32:
+            return to_gpu<float>(traversers);
+        case gremlinxx::comparison::C::VERTEX:
+            return to_gpu<Vertex*>(traversers);
+    }
+
+    throw std::runtime_error("Illegal type provided");
 }
 
 // (vertex id) -> (originating traverser)
@@ -395,4 +469,84 @@ std::vector<int32_t> collapse_path(gpu_traverser_info_t& traverser_info, bool fr
     return returned_oo_cpu;
 }
 
-#endif
+template<typename T>
+void retrieve_new_traversers(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
+    std::vector<int32_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
+
+    std::vector<T> new_traversers_raw(traverser_info.num_traversers);
+    cudaMemcpy(new_traversers_raw.data(), (T*)traverser_info.traversers, sizeof(T) * traverser_info.num_traversers, cudaMemcpyDeviceToHost);
+    
+    size_t old_size = output_traversers.size();
+    output_traversers.resize(old_size + traverser_info.num_traversers);
+    for(int k = 0; k < traverser_info.num_traversers; ++k) {
+        Traverser& originating_traverser = traverser_info.original_traversers[originating_traversers[k]];
+        
+        output_traversers[old_size + k].replace_data(new_traversers_raw[k]);
+        auto& se = originating_traverser.get_side_effects();
+        output_traversers[old_size + k].get_side_effects().insert(se.begin(), se.end());
+    }
+
+}
+
+template<>
+void retrieve_new_traversers<Vertex*>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
+    std::vector<int32_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
+
+    std::vector<int32_t> new_traversers_raw(traverser_info.num_traversers);
+    cudaMemcpy(new_traversers_raw.data(), (int32_t*)traverser_info.traversers, sizeof(int32_t) * traverser_info.num_traversers, cudaMemcpyDeviceToHost);
+    
+    GPUGraph* gpu_graph = static_cast<GPUGraph*>(parent_traversal->getGraph());
+    size_t old_size = output_traversers.size();
+    output_traversers.resize(old_size + traverser_info.num_traversers);
+    for(int k = 0; k < traverser_info.num_traversers; ++k) {
+        Vertex* v = static_cast<Vertex*>(gpu_graph->access_vertices()[new_traversers_raw[k]]);
+        Traverser& originating_traverser = traverser_info.original_traversers[originating_traversers[k]];
+        
+        output_traversers[old_size + k].replace_data(v);
+        auto& se = originating_traverser.get_side_effects();
+        output_traversers[old_size + k].get_side_effects().insert(se.begin(), se.end());
+    }
+
+}
+
+template
+void retrieve_new_traversers<uint64_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<uint32_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<uint8_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<int64_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<int32_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<int8_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<double>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+template
+void retrieve_new_traversers<float>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+
+void C_RETRIEVE_NEW_TRAVERSERS(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
+    switch(traverser_info.traverser_dtype) {
+        case gremlinxx::comparison::C::UINT64:
+            return retrieve_new_traversers<uint64_t>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::UINT32:
+            return retrieve_new_traversers<uint32_t>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::UINT8:
+            return retrieve_new_traversers<uint8_t>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::INT64:
+            return retrieve_new_traversers<int64_t>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::INT32:
+            return retrieve_new_traversers<int32_t>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::INT8:
+            return retrieve_new_traversers<int8_t>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::FLOAT64:
+            return retrieve_new_traversers<double>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::FLOAT32:
+            return retrieve_new_traversers<float>(parent_traversal, output_traversers, traverser_info);
+        case gremlinxx::comparison::C::VERTEX:
+            return retrieve_new_traversers<Vertex*>(parent_traversal, output_traversers, traverser_info);
+    }
+
+    throw std::runtime_error("Illegal type provided");
+}
