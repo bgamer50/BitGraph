@@ -57,5 +57,12 @@ bin/repeat.exe: bin/repeat.o
 bin/repeat.o: examples/repeat.cpp
 	$(GPUCC) $(GPUCFLAGS) examples/repeat.cpp -c -o bin/repeat.o $(IFLAGS)
 
+test/bin/TestGPUPropertyTable.exe: test/bin/TestGPUPropertyTable.o
+	$(CC) $(CFLAGS) test/bin/TestGPUPropertyTable.o -o test/bin/TestGPUPropertyTable.exe $(GPULFLAGS)
+
+test/bin/TestGPUPropertyTable.o: test/TestGPUPropertyTable.cpp
+	$(GPUCC) $(GPUCFLAGS) test/TestGPUPropertyTable.cpp -c -o test/bin/TestGPUPropertyTable.o $(IFLAGS)
+
 clean:
 	rm -rf bin/*
+	rm -rf test/bin/*
