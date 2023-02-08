@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
     for(Edge* e : graph.edges()) std::cout << boost::any_cast<std::string>(e->outV()->property(NAME)->value()) << " -> " << boost::any_cast<std::string>(e->inV()->property(NAME)->value()) << "\n";
 
     try {
-        g->V()->property("cc", __->both()->id())->forEachRemaining([](boost::any& w) {
+        g->V()->property("cc", both()->id())->forEachRemaining([](boost::any& w) {
             Vertex* v = boost::any_cast<Vertex*>(w);
             boost::any a = v->property("cc")->value();
             std::cout << a.type().name() << "\n";
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
 
     try {
         std::cout << "coalesce:" << std::endl;
-        graph.traversal()->V()->coalesce({__->id(), __->id()})->forEachRemaining([](boost::any& i) {
+        graph.traversal()->V()->coalesce({id(), id()})->forEachRemaining([](boost::any& i) {
             uint64_t id = boost::any_cast<uint64_t>(i);
             std::cout << id << std::endl;
         });

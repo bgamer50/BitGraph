@@ -14,34 +14,24 @@
 
 #include <cuda_runtime.h>
 
-#include <thrust/iterator/permutation_iterator.h>
-#include <thrust/iterator/zip_iterator.h>
-#include <thrust/iterator/transform_iterator.h>
-#include <thrust/iterator/constant_iterator.h>
-#include <thrust/copy.h>
-#include <thrust/scan.h>
-#include <thrust/device_ptr.h>
-#include <thrust/device_vector.h>
-#include <thrust/functional.h>
-#include <thrust/tuple.h>
+#include "structure/memory/ThrustUtils.h"
 
-__global__ void k_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N);
-void t_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N);
-__global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N);
-__global__ void k_prefix_sum(int32_t* A, int32_t* B, int i, int N);
-__global__ void k_pick_unique_trim(int32_t* V, int32_t* V_ptr, int32_t* U, int32_t* U_counts, size_t U_offset, size_t U_size);
-__global__ void k_pick_unique(int32_t* A, size_t N, int32_t* U, int32_t* U_counts, int32_t U_offset, size_t U_size);
+__global__ void k_quadvv_get_mem(size_t* row_ptr, size_t* T, size_t* R, int N);
+void t_quadvv_get_mem(size_t* row_ptr, size_t* T, size_t* R, int N);
+__global__ void k_quadvv_get_adj(size_t* row_ptr, size_t* col_ptr, size_t* T, size_t* ps, size_t* O, size_t* OO, int N);
+__global__ void k_prefix_sum(size_t* A, size_t* B, int i, int N);
 
-void prefix_sum(int32_t** A_ptr, int N);
-std::tuple<int32_t*, int32_t*, int> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N);
-std::pair<std::pair<int32_t*, int32_t*>, int32_t*> gpu_query_adjacency_v_to_e(sparse_matrix_device_t& M, int32_t* gpu_element_traversers);
+void prefix_sum(size_t** A_ptr, int N);
+std::tuple<size_t*, size_t*, size_t> gpu_query_adjacency_v_to_v(bitgraph::matrix::sparse_matrix_device& M, size_t* gpu_element_traversers, size_t N);
+std::pair<std::pair<size_t*, size_t*>, size_t*> gpu_query_adjacency_v_to_e(bitgraph::matrix::sparse_matrix_device& M, size_t* gpu_element_traversers);
 
+// TODO write a function for properly updating this data structure
 typedef struct gpu_traverser_info {
     void* traversers;
     size_t num_traversers;
     gremlinxx::comparison::C traverser_dtype;
     TraverserSet original_traversers;
-    std::vector<std::pair<int32_t*, size_t>> paths;
+    std::vector<std::pair<size_t*, size_t>> paths;
 } gpu_traverser_info_t;
 
 enum reduction_type{MIN, MAX, SUM, MUL};
@@ -53,6 +43,8 @@ enum reduction_type{MIN, MAX, SUM, MUL};
 template<typename T>
 void* to_gpu(TraverserSet& traversers) {
     const size_t sz = traversers.size();
+    std::cout << "# traversers: " << sz << std::endl;
+    std::cout << "trv size: " << sizeof(T) << std::endl;
 
     T* gpu_traversers;
     cudaMalloc((void**) &gpu_traversers, sizeof(T) * sz);
@@ -71,7 +63,7 @@ void* to_gpu(TraverserSet& traversers) {
         }
     } 
     
-    cudaMemcpy(gpu_traversers, trv.data(), sizeof(int32_t) * sz, cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_traversers, trv.data(), sizeof(size_t) * sz, cudaMemcpyDefault);
     cudaDeviceSynchronize();
     cudaCheckErrors("copy traversers to device");
     return (void*)gpu_traversers;
@@ -80,13 +72,14 @@ void* to_gpu(TraverserSet& traversers) {
 template<>
 void* to_gpu<Vertex*>(TraverserSet& traversers) {
     const size_t sz = traversers.size();
+    std::cout << "# traversers: " << sz << std::endl;
 
-    int32_t* gpu_traversers;
-    cudaMalloc((void**) &gpu_traversers, sizeof(int32_t) * sz);
+    size_t* gpu_traversers;
+    cudaMalloc((void**) &gpu_traversers, sizeof(size_t) * sz);
     cudaDeviceSynchronize();
     cudaCheckErrors("allocate traversers");
 
-    std::vector<int32_t> trv(sz); 
+    std::vector<size_t> trv(sz); 
     for(size_t k = 0; k < sz; ++k) {
         try {
             Vertex* v = boost::any_cast<Vertex*>(traversers[k].get());
@@ -101,7 +94,7 @@ void* to_gpu<Vertex*>(TraverserSet& traversers) {
         }
     } 
     
-    cudaMemcpy(gpu_traversers, trv.data(), sizeof(int32_t) * sz, cudaMemcpyHostToDevice);
+    cudaMemcpy(gpu_traversers, trv.data(), sizeof(size_t) * sz, cudaMemcpyDefault);
     cudaDeviceSynchronize();
     cudaCheckErrors("copy traversers to device");
     return (void*)gpu_traversers;
@@ -155,12 +148,12 @@ void* C_TO_GPU(gremlinxx::comparison::C c, TraverserSet& traversers) {
     gpu_element_traversers: The traversers as literal objects (an array of of Vertex ids.)
     N: The number of initial traversers.
 **/
-std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix_device_t& M, int32_t* gpu_element_traversers, size_t N) {
-    int32_t* result;
-    int32_t* output;
-    int32_t* output_origin;
+std::tuple<size_t*, size_t*, size_t> gpu_query_adjacency_v_to_v(bitgraph::matrix::sparse_matrix_device& M, size_t* gpu_element_traversers, size_t N) {
+    size_t* result;
+    size_t* output;
+    size_t* output_origin;
     
-    cudaMalloc((void**) &result, sizeof(int32_t) * N);
+    cudaMalloc((void**) &result, sizeof(size_t) * N);
     k_quadvv_get_mem<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(M.row_ptr, gpu_element_traversers, result, N);
     //t_quadvv_get_mem(M.row_ptr, gpu_element_traversers, result, N);
     cudaDeviceSynchronize();
@@ -169,11 +162,15 @@ std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix
     prefix_sum(&result, N); // result now holds the prefix sums.
 
     // CPU needs to know ps information anyways, so we copy it and cudaMalloc the sum
-    int32_t N_prime; // = result[N-1]; # of output traversers
-    cudaMemcpy(&N_prime, &result[N-1], sizeof(int32_t) * 1, cudaMemcpyDeviceToHost);
+    size_t N_prime; // = result[N-1]; # of output traversers
+    cudaMemcpy(&N_prime, &result[N-1], sizeof(size_t) * 1, cudaMemcpyDefault);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("copy result to host");
     
-    cudaMalloc((void**) &output, sizeof(int32_t) * N_prime);
-    cudaMalloc((void**) &output_origin, sizeof(int32_t) * N_prime);
+    cudaMalloc((void**) &output, sizeof(size_t) * N_prime);
+    cudaMalloc((void**) &output_origin, sizeof(size_t) * N_prime);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("allocate output and output origin");
 
     //std::cout << "num traversers: " << N << std::endl;
     //std::cout << "num blocks: " << NUM_BLOCKS(N) << std::endl;
@@ -195,42 +192,30 @@ std::tuple<int32_t*, int32_t*, int32_t> gpu_query_adjacency_v_to_v(sparse_matrix
     R: result array; contains # of new traversers each traverser will generate
     N: # of initial traversers
 **/
-__global__ void k_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N) {
+__global__ void k_quadvv_get_mem(size_t* row_ptr, size_t* T, size_t* R, int N) {
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     int stride = blockDim.x * gridDim.x;
-    for (int i = index; i < N; i += stride) {
-        int32_t vertex = T[i];
-        int32_t start = row_ptr[vertex];
-        int32_t end = row_ptr[vertex + 1];
+    for (size_t i = index; i < N; i += stride) {
+        size_t vertex = T[i];
+        size_t start = row_ptr[vertex];
+        size_t end = row_ptr[vertex + 1];
         
-        int32_t v_out_count = end - start;
+        size_t v_out_count = end - start;
         R[i] = v_out_count;
     }
 }
 
-struct plus_op : public thrust::unary_function<thrust::tuple<int32_t,int32_t>,int32_t> {
-    __device__ int32_t operator()(thrust::tuple<int32_t, int32_t> t) const {
-        return thrust::get<0>(t) + thrust::get<1>(t);
-    }
-};
+void t_quadvv_get_mem(size_t* row_ptr, size_t* T, size_t* R, int N) {
+    thrust::device_ptr<size_t> row_dptr = thrust::device_pointer_cast(row_ptr);
+    thrust::device_ptr<size_t> T_dptr = thrust::device_pointer_cast(T);
 
-struct minus_op : public thrust::unary_function<thrust::tuple<int32_t,int32_t>,int32_t> {
-    __device__ int32_t operator()(thrust::tuple<int32_t, int32_t> t) const {
-        return thrust::get<0>(t) - thrust::get<1>(t);
-    }
-};
-
-void t_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N) {
-    thrust::device_ptr<int32_t> row_dptr = thrust::device_pointer_cast(row_ptr);
-    thrust::device_ptr<int32_t> T_dptr = thrust::device_pointer_cast(T);
-
-    thrust::constant_iterator<int32_t> single = thrust::make_constant_iterator<int32_t>(1);
+    thrust::constant_iterator<size_t> single = thrust::make_constant_iterator<size_t>(1);
 
     auto T_plus_one = thrust::make_transform_iterator(
             thrust::make_zip_iterator(
                 thrust::make_tuple(T_dptr, single)
             ),
-            plus_op()
+            bitgraph::memory::plus_op()
     );
 
     auto zip_begin = thrust::make_zip_iterator(
@@ -259,7 +244,7 @@ void t_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N) {
         )
     );
 
-    thrust::copy(thrust::make_transform_iterator(zip_begin, minus_op()), thrust::make_transform_iterator(zip_end, minus_op()), thrust::device_pointer_cast(R));
+    thrust::copy(thrust::make_transform_iterator(zip_begin, bitgraph::memory::minus_op()), thrust::make_transform_iterator(zip_end, bitgraph::memory::minus_op()), thrust::device_pointer_cast(R));
 }
 
 /**
@@ -270,18 +255,18 @@ void t_quadvv_get_mem(int32_t* row_ptr, int32_t* T, int32_t* R, int N) {
     OO: The output origin array (which original traverser did the new traverser originate from)
     N: The original number of traversers
 **/
-__global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N) {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
+__global__ void k_quadvv_get_adj(size_t* row_ptr, size_t* col_ptr, size_t* T, size_t* ps, size_t* O, size_t* OO, int N) {
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t stride = blockDim.x * gridDim.x;
 
-    for(int i = index; i < N; i += stride) {
-        int32_t vertex = T[i];
-        int output_index = i==0 ? 0 : ps[i - 1];
+    for(size_t i = index; i < N; i += stride) {
+        size_t vertex = T[i];
+        size_t output_index = i==0 ? 0 : ps[i - 1];
 
-        int32_t start = row_ptr[vertex];
-        int32_t end = row_ptr[vertex + 1];
+        size_t start = row_ptr[vertex];
+        size_t end = row_ptr[vertex + 1];
         
-        for(int j = start; j < end; ++j) {
+        for(size_t j = start; j < end; ++j) {
             O[output_index] = col_ptr[j];
             OO[output_index] = i;
             ++output_index;
@@ -289,37 +274,21 @@ __global__ void k_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T,
     }
 }
 
-// gridDim.x * blockDim.x = # traversers
-// blockDim.y = max degree
-/*
-__global__ void k_quadvv_get_adj_v2(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N, int M, int nnz) {
-    extern __shared__ int32_t s[];
-
-    int index = gridDim.x * blockIdx.x + blockDim.x * threadIdx.x + threadIdx.y;
-    int vertex = T[i];
-    int output_index = i==0 ? 0 : ps[i - 1]; // TODO might be able to put this in shared memory
-
-    s[0] = row_ptr[vertex];
-    s[1] = row_ptr[vertex + 1];
-
-    
-}
-*/
-
-void t_quadvv_get_adj(int32_t* row_ptr, int32_t* col_ptr, int32_t* T, int32_t* ps, int32_t* O, int32_t* OO, int N, int M, int nnz) {
+// This will probably eventually replace k_quadvv_get_adj
+void t_quadvv_get_adj(size_t* row_ptr, size_t* col_ptr, size_t* T, size_t* ps, size_t* O, size_t* OO, int N, int M, int nnz) {
 
 }
 
-void prefix_sum(int32_t** A_ptr, int N) {
-    //thrust::device_ptr<int32_t> A_dptr = thrust::device_pointer_cast(*A_ptr);
+void prefix_sum(size_t** A_ptr, int N) {
+    //thrust::device_ptr<size_t> A_dptr = thrust::device_pointer_cast(*A_ptr);
     //thrust::inclusive_scan(A_dptr, A_dptr+N, A_dptr);
     
 
-    int32_t* A = *A_ptr;
-    int32_t* temp;
-    cudaMalloc((void**) &temp, sizeof(int32_t) * N);
+    size_t* A = *A_ptr;
+    size_t* temp;
+    cudaMalloc((void**) &temp, sizeof(size_t) * N);
     
-    for(int i = 1; i < N; i *= 2) {
+    for(size_t i = 1; i < N; i *= 2) {
         k_prefix_sum<<<NUM_BLOCKS(N), BLOCK_SIZE>>>(A, temp, i, N);
         cudaDeviceSynchronize();
         cudaCheckErrors("k_prefix_sum");
@@ -335,123 +304,81 @@ void prefix_sum(int32_t** A_ptr, int N) {
 /**
     Helper method for prefix_sum (device kernel)
 **/
-__global__ void k_prefix_sum(int32_t* A, int32_t* B, int i, int N) {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-    for (int j = index; j < N; j += stride) {
+__global__ void k_prefix_sum(size_t* A, size_t* B, size_t i, size_t N) {
+    size_t index = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t stride = blockDim.x * gridDim.x;
+    for (size_t j = index; j < N; j += stride) {
         if(j < i) B[j] = A[j];
         else B[j] = A[j] + A[j-i];
     }
 }
 
 // (outV id, inV id) -> (originating traverser)
-std::pair<std::pair<int32_t*, int32_t*>, int32_t*> gpu_query_adjacency_v_to_e(sparse_matrix_device_t& M, int32_t* gpu_element_traversers) {
+std::pair<std::pair<size_t*, size_t*>, size_t*> gpu_query_adjacency_v_to_e(bitgraph::matrix::sparse_matrix_device& M, size_t* gpu_element_traversers) {
     // TODO don't bother supporting this until EdgeVertexStep is implemented in Gremlin++
     throw std::runtime_error("Cannot currently query adjacency from Vertex to Edge!");
 }
 
 /**
-    For each possible integer from the set U (U_start through U_end, inclusive), an
-    array is returned whose values are the picked element indices from A, and other is returned
-    with the values themselves.  For instance, take A=[1,2,3,1] and U = [-3..3].  The returned 
-    arrays V_ptr=[0,1,2] and V=[1,2,3] points to nonduplicate
-    elements 0, 1, and 2 from A.
+    Removes duplicates from A (modifies the original device array).
+    Returns the original indices of the unique elements and the
+    number of unique elements (size of index array and new size of A).
 
-    V: The array of actual deduplicated values.
+    This method is NOT stable (may choose unique indices that are not
+    the first occurrence of that value).
+
     V_ptr: The array pointing to each deduplicated value's origin
     V_size: The length of V and V_ptr (# of deduplicated elements).
 **/
-std::tuple<int32_t*, int32_t*, int32_t> pick_unique(int32_t* A, size_t N, int32_t U_start, int32_t U_end) {
-    size_t U_size = U_end - U_start + 1;
+std::tuple<size_t*, size_t> pick_unique(size_t* A, size_t N) {
+    thrust::device_ptr<size_t> A_tptr = thrust::device_pointer_cast(A);
 
-    int32_t* U;
-    int32_t* U_counts;
-    cudaMalloc((void**) &U, sizeof(int32_t) * U_size);
-    cudaMalloc((void**) &U_counts, sizeof(int32_t) * U_size);
+    size_t* V_ptr;
+    cudaMalloc(&V_ptr, sizeof(size_t) * N);
     cudaDeviceSynchronize();
-    cudaCheckErrors("Allocate arrays U and U_counts in pick_unique");
+    cudaCheckErrors("allocate V_ptr");
+    thrust::device_ptr<size_t> V_ptr_tptr = thrust::device_pointer_cast(V_ptr);
 
+    auto seq_it = thrust::make_counting_iterator((size_t)0);
+    thrust::copy(
+        seq_it,
+        seq_it + N,
+        V_ptr_tptr
+    );
 
-    k_pick_unique<<<NUM_BLOCKS(U_size), BLOCK_SIZE>>>(A, N, U, U_counts, U_start, U_size);
-    cudaDeviceSynchronize();
-    cudaCheckErrors("Call k_pick_unique device kernel");
-    
-    prefix_sum(&U_counts, U_size);
-    int32_t V_size;
-    cudaMemcpy(&V_size, U_counts + (U_size - 1), sizeof(int32_t) * 1, cudaMemcpyDeviceToHost);
-    cudaDeviceSynchronize();
-    cudaCheckErrors("Get values array size in pick_unique");
+    // Sort the kv pairs since unique_by_key will only remove
+    // consecutive unique elements.
+    thrust::sort_by_key(
+        A_tptr,
+        A_tptr + N,
+        V_ptr_tptr
+    );
 
-    int32_t* V;
-    int32_t* V_ptr;
-    cudaMalloc((void**) &V, sizeof(int32_t) * V_size);
-    cudaMalloc((void**) &V_ptr, sizeof(int32_t) * V_size);
-    cudaDeviceSynchronize();
-    cudaCheckErrors("Allocate value arras V, V_ptr in pick_unique");
+    thrust::device_ptr<size_t> A_end;
+    thrust::device_ptr<size_t> V_ptr_end;
+    thrust::tie(A_end, V_ptr_end) = thrust::unique_by_key(
+        A_tptr,
+        A_tptr + N,
+        V_ptr_tptr
+    );
 
-    k_pick_unique_trim<<<NUM_BLOCKS(U_size), BLOCK_SIZE>>>(V, V_ptr, U, U_counts, U_start, U_size);
-    cudaDeviceSynchronize();
-    cudaCheckErrors("Call k_pick_unique_trim device kernel");
-
-    cudaFree(U);
-    cudaFree(U_counts);
-    cudaDeviceSynchronize();
-    cudaCheckErrors("Free arrays U, U_counts");
-
-    return std::make_tuple(V, V_ptr, V_size);
-}
-
-__global__ void k_pick_unique_trim(int32_t* V, int32_t* V_ptr, int32_t* U, int32_t* U_counts, size_t U_offset, size_t U_size) {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-    for (int j = index; j < U_size; j += stride) {
-        int Uj = U[j];
-        if(Uj >= 0) {
-            int pos_V = j==0 ? 0 : U_counts[j-1];
-            V_ptr[pos_V] = Uj;
-            V[pos_V] = j + U_offset;
-        }
-    }
-}
-
-/**
-    Helper method for pick_unique (device kernel)
-    A: original array
-    N: size of A
-    U: set of possible elements mapped to their first indices in A if present
-    U_counts: count for each element in U
-    U_offset: first value of U
-    U_size: size of U
-**/
-__global__ void k_pick_unique(int32_t* A, size_t N, int32_t* U, int32_t* U_counts, int32_t U_offset, size_t U_size) {
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-    // note: N is not the end of this loop - in this case it's U_size since each executor is assigned to an element of U.
-    for (int j = index; j < U_size; j += stride) {
-        int U_val = j + U_offset;
-        U[j] = -1;
-        U_counts[j] = 0;
-        for(int k = 0; k < N; ++k) if(A[k] == U_val) {
-            U[j] = k;
-            U_counts[j] = 1;
-            break;
-        }
-    }
+    size_t V_size = V_ptr_end - V_ptr_tptr;
+    return std::make_tuple(V_ptr, V_size);
 }
 
 /**
    Collapses a path down into a single output origin array.
    traverser_info: the traverser info (contains path & other info)
 **/
-std::vector<int32_t> collapse_path(gpu_traverser_info_t& traverser_info, bool free_memory) {
+std::vector<size_t> collapse_path(gpu_traverser_info_t& traverser_info, bool free_memory) {
     size_t OO_size = traverser_info.paths.back().second;
 
-    int32_t* OO = traverser_info.paths.back().first;
+    size_t* OO = traverser_info.paths.back().first;
 
-    thrust::device_ptr<int32_t> d_ptr_OO = thrust::device_pointer_cast(OO);
+    thrust::device_ptr<size_t> d_ptr_OO = thrust::device_pointer_cast(OO);
 
     for(auto it = traverser_info.paths.rbegin() + 1; it != traverser_info.paths.rend(); ++it) {
-        thrust::device_ptr<int32_t> d_ptr_previous_traversers = thrust::device_pointer_cast(it->first);
+        thrust::device_ptr<size_t> d_ptr_previous_traversers = thrust::device_pointer_cast(it->first);
         size_t num_previous_traversers = it->second;
 
         thrust::copy(
@@ -463,18 +390,25 @@ std::vector<int32_t> collapse_path(gpu_traverser_info_t& traverser_info, bool fr
         if(free_memory) cudaFree(it->first);
     }
 
-    std::vector<int32_t> returned_oo_cpu(OO_size);
-    cudaMemcpy(returned_oo_cpu.data(), OO, sizeof(int32_t) * OO_size, cudaMemcpyDeviceToHost);
+    std::vector<size_t> returned_oo_cpu(OO_size);
+    cudaMemcpy(returned_oo_cpu.data(), OO, sizeof(size_t) * OO_size, cudaMemcpyDefault);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("Copy output origin to CPU");
+
     if(free_memory) cudaFree(OO);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("free output origin");
     return returned_oo_cpu;
 }
 
 template<typename T>
 void retrieve_new_traversers(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
-    std::vector<int32_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
+    std::vector<size_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
 
     std::vector<T> new_traversers_raw(traverser_info.num_traversers);
-    cudaMemcpy(new_traversers_raw.data(), (T*)traverser_info.traversers, sizeof(T) * traverser_info.num_traversers, cudaMemcpyDeviceToHost);
+    cudaMemcpy(new_traversers_raw.data(), (T*)traverser_info.traversers, sizeof(T) * traverser_info.num_traversers, cudaMemcpyDefault);
+    cudaDeviceSynchronize();
+    cudaCheckErrors("Copy traversers to CPU");
     
     size_t old_size = output_traversers.size();
     output_traversers.resize(old_size + traverser_info.num_traversers);
@@ -490,10 +424,17 @@ void retrieve_new_traversers(GraphTraversal* parent_traversal, TraverserSet& out
 
 template<>
 void retrieve_new_traversers<Vertex*>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
-    std::vector<int32_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
+    std::vector<size_t> originating_traversers = collapse_path(traverser_info, true); // don't handle path info at the moment
 
-    std::vector<int32_t> new_traversers_raw(traverser_info.num_traversers);
-    cudaMemcpy(new_traversers_raw.data(), (int32_t*)traverser_info.traversers, sizeof(int32_t) * traverser_info.num_traversers, cudaMemcpyDeviceToHost);
+    std::vector<size_t> new_traversers_raw(traverser_info.num_traversers);
+    cudaMemcpy(
+        new_traversers_raw.data(),
+        static_cast<size_t*>(traverser_info.traversers),
+        sizeof(size_t) * traverser_info.num_traversers,
+        cudaMemcpyDefault
+    );
+    cudaDeviceSynchronize();
+    cudaCheckErrors("Copy vertex traversers to CPU");
     
     GPUGraph* gpu_graph = static_cast<GPUGraph*>(parent_traversal->getGraph());
     size_t old_size = output_traversers.size();

@@ -16,9 +16,6 @@ class GPUVertexStep : public TraversalStep {
         bool dedup;
 
     public:
-        // whether this step has gone through the chaining process
-        bool chained = false;
-
         GPUVertexStep(Direction direction, std::set<std::string> edge_labels, GraphStepType gs_type, bool dedup)
         : TraversalStep(MAP, GPU_VERTEX_STEP) {
             this->direction = direction;
@@ -34,14 +31,14 @@ class GPUVertexStep : public TraversalStep {
 };
 
 #include "structure/GPUGraph.h"
-#include "structure/matrix/GPUSparseMatrixWrapper.h"
+#include "structure/matrix/GPUSparseMatrix.h"
 #include "step/gpu/GPUTraversalHelper.h"
 #include "traversal/Comparison.h"
 #include <cuda_runtime.h>
 
 void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
     gpu_traverser_info_t traverser_info = boost::any_cast<gpu_traverser_info_t>(traversers.front().get());
-    int32_t* gpu_element_traversers = static_cast<int32_t*>(traverser_info.traversers);
+    size_t* gpu_element_traversers = static_cast<size_t*>(traverser_info.traversers);
 
     // short-circuit if there are no traversers
     if(traverser_info.num_traversers == 0) {
@@ -49,7 +46,7 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
         return;
     }
 
-    if(traverser_info.traverser_dtype != gremlinxx::comparison::VERTEX) {
+    if(traverser_info.traverser_dtype != gremlinxx::comparison::C::VERTEX) {
         std::stringstream ss;
         ss << "Encountered an illegal traverser type for VertexStep: ";
         ss << gremlinxx::comparison::C_to_string[traverser_info.traverser_dtype];
@@ -59,12 +56,13 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
     GPUGraph* gpu_graph = static_cast<GPUGraph*>(traversal->getGraph());
 
     // Manipulate the graph's sparse matrix directly
-    sparse_matrix_device_t& adjacency_matrix = gpu_graph->access_adjacency_matrix();
+    bitgraph::matrix::sparse_matrix_device& adjacency_matrix = gpu_graph->access_adjacency_matrix();
 
     if(this->gs_type == VERTEX) {
         // (vertex id) -> (originating traverser)
-        std::tuple<int32_t*, int32_t*, int> new_gpu_traversers;
-        sparse_matrix_device_t adj_mat_direction = gpu_graph->get_adjacency_matrix(this->direction);
+        std::tuple<size_t*, size_t*, size_t> new_gpu_traversers;
+        // TODO for the both matrix you need to call the adjacency query twice on separate streams
+        bitgraph::matrix::sparse_matrix_device adj_mat_direction = gpu_graph->get_adjacency_matrix(this->direction);
         new_gpu_traversers = gpu_query_adjacency_v_to_v(adj_mat_direction, gpu_element_traversers, traverser_info.num_traversers);
         cudaFree(gpu_element_traversers);
         cudaDeviceSynchronize();
@@ -74,12 +72,17 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
         auto& output_origin = std::get<1>(new_gpu_traversers);
         auto& num_traversers = std::get<2>(new_gpu_traversers);
         if(this->dedup) {
-            std::tuple<int32_t*, int32_t*, int32_t> picks = pick_unique(new_traversers, num_traversers, 0, adjacency_matrix.num_rows - 1);
+            size_t* V_ptr; // allocated by pick_unique
+            size_t n_unique;
+            std::tie(V_ptr, n_unique) = pick_unique(
+                new_traversers,
+                num_traversers
+            );
 
-            traverser_info.num_traversers = std::get<2>(picks);
-            traverser_info.traversers = std::get<0>(picks);
+            traverser_info.num_traversers = n_unique;
+            traverser_info.traversers = new_traversers; // was modified by pick_unique
             traverser_info.paths.push_back(std::make_pair(output_origin, num_traversers));
-            traverser_info.paths.push_back(std::make_pair(std::get<1>(picks), traverser_info.num_traversers));
+            traverser_info.paths.push_back(std::make_pair(V_ptr, traverser_info.num_traversers));
         }
         else {
             traverser_info.num_traversers = num_traversers;

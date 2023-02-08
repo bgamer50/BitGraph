@@ -137,8 +137,8 @@ int main(int charc, char* argv[]) {
             auto start = std::chrono::system_clock::now();
             boost::any lca = 
                 g->V()->has(NAME, voi1)->
-                    repeat(__->out())->emit()->as("x")->
-                    repeat(__->in())->emit(__->has(NAME, voi2))->
+                    repeat(out())->emit()->as("x")->
+                    repeat(in())->emit(has(NAME, voi2))->
                     select("x")->limit(1)->values(NAME)->next();
             auto end = std::chrono::system_clock::now();
             std::cout << "found the lca!" << std::endl;

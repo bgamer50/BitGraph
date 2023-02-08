@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
         try {
             std::cout << "calculating out-degree for all vertices" << std::endl;
             start = std::chrono::system_clock::now();
-            h->V()->property("out_degree", __->out()->count())->iterate();
+            h->V()->property("out_degree", out()->count())->iterate();
             end = std::chrono::system_clock::now();
             elapsed = end-start;
             std::cerr << "out-degree time: " << elapsed.count() << " seconds." << std::endl;
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
 
             std::cout << "calculating in-degree for all vertices" << std::endl;
             start = std::chrono::system_clock::now();
-            h->V()->property("in_degree", __->in()->count())->iterate();
+            h->V()->property("in_degree", in()->count())->iterate();
             end = std::chrono::system_clock::now();
             elapsed = end-start;
             std::cerr << "in-degree time: " << elapsed.count() << " seconds." << std::endl;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
 
             std::cout << "calculating both-degree for all vertices" << std::endl;
             start = std::chrono::system_clock::now();
-            h->V()->property("both_degree", __->both()->count())->iterate();
+            h->V()->property("both_degree", both()->count())->iterate();
             end = std::chrono::system_clock::now();
             elapsed = end-start;
             std::cerr << "both-degree time: " << elapsed.count() << " seconds." << std::endl;

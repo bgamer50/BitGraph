@@ -84,18 +84,18 @@ int main(int argc, char* argv[]) {
             cudaProfilerStart();
             start = std::chrono::system_clock::now();
 
-            h->V()->property("cc", __->id())->iterate();
-            h->V()->property("old_cc", __->values("cc"))->iterate();
+            h->V()->property("cc", id())->iterate();
+            h->V()->property("old_cc", values("cc"))->iterate();
             
             size_t diff = 1;
             while(diff > 0) {
                 diff = boost::any_cast<size_t>(
                     h->V()
-                    ->property("old_cc", __->values("cc"))
+                    ->property("old_cc", values("cc"))
                     ->property("cc", 
-                        __->_union({__->both()->values("old_cc"), __->values("old_cc")})->min<uint64_t>()
+                        _union({both()->values("old_cc"), values("old_cc")})->min<uint64_t>()
                     )
-                    ->valueMap({"cc","old_cc"})->by(__->unfold())
+                    ->valueMap({"cc","old_cc"})->by(unfold())
                     ->where("cc", P::neq("old_cc"))
                     ->count()
                     ->next()

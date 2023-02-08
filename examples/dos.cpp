@@ -82,7 +82,7 @@ int main(int charc, char* argv[]) {
 
         std::cout << "Calculating 3 degrees of separation from vertex " << start_vertex_name << " using repeat step" << std::endl;
         start = std::chrono::system_clock::now();
-        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(__->both())->times(3)->dedup()->count()->next());
+        count = boost::any_cast<size_t>(g->V(start_vertex)->repeat(both())->times(3)->dedup()->count()->next());
         end = std::chrono::system_clock::now();
         elapsed = end - start;
         std::cout << count << std::endl;

@@ -2,7 +2,7 @@ CC :=  /usr/local/cuda/bin/nvcc
 CFLAGS := -O3 --std=c++17
 
 GPUCFLAGS := -O3 --std=c++17 -x cu
-GPULFLAGS := -lcusparse_static
+GPULFLAGS := 
 
 IFLAGS := -I../../ -I../../../gremlin++/
 

@@ -52,12 +52,9 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 				}
 
 				GPUVertexStep* gpu_vertex_step = new GPUVertexStep(vertex_step->get_direction(), vertex_step->get_labels(), vertex_step->get_type(), dedup);
-				if(!gpu_vertex_step->chained) {
-					auto dtype = gremlinxx::comparison::C::VERTEX;
-					it = steps.insert(it, new GPUBindStep(dtype)) + 1;
-					it = steps.insert(it + 1, new GPUUnbindStep()) - 1;
-					gpu_vertex_step->chained = true;
-				}
+				auto dtype = gremlinxx::comparison::C::VERTEX;
+				it = steps.insert(it, new GPUBindStep(dtype)) + 1;
+				it = steps.insert(it + 1, new GPUUnbindStep()) - 1;
 
 				*it = gpu_vertex_step;
 				break;
@@ -68,6 +65,9 @@ void gpugraph_strategy(std::vector<TraversalStep*>& steps) {
 				if(property_step->get_type() == PROPERTY) throw std::runtime_error("Getting properties not supported on GPU, only raw values!");
 				
 				GPUPropertyStep* gpu_property_step = new GPUPropertyStep(property_step->get_keys());
+				auto dtype = gremlinxx::comparison::C::VERTEX;
+				it = steps.insert(it, new GPUBindStep(dtype)) + 1;
+				it = steps.insert(it + 1, new GPUUnbindStep()) - 1;
 				*it = gpu_property_step;
 				break;
 			}

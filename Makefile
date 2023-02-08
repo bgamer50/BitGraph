@@ -5,7 +5,7 @@ CUDALIB := /usr/local/cuda/lib64
 
 GPUCC :=  /usr/local/cuda/bin/nvcc
 GPUCFLAGS := -forward-unknown-to-host-compiler -O3 --std=c++17 -x cu -funsafe-math-optimizations -frename-registers -funroll-loops -fsized-deallocation -fopenmp #-g -pg -no-pie
-GPULFLAGS := -L$(CUDALIB) -lcusparse_static -lcudart_static -ldl -lrt -pthread #-ltbb
+GPULFLAGS := -L$(CUDALIB) -lcudart_static -ldl -lrt -pthread 
 
 IFLAGS := -I. -I../gremlin++/ -I${CONDA_PREFIX}/include
 
@@ -62,6 +62,12 @@ test/bin/TestGPUPropertyTable.exe: test/bin/TestGPUPropertyTable.o
 
 test/bin/TestGPUPropertyTable.o: test/TestGPUPropertyTable.cpp
 	$(GPUCC) $(GPUCFLAGS) test/TestGPUPropertyTable.cpp -c -o test/bin/TestGPUPropertyTable.o $(IFLAGS)
+
+test/bin/TestGPUSparseMatrix.exe: test/bin/TestGPUSparseMatrix.o
+	$(CC) $(CFLAGS) test/bin/TestGPUSparseMatrix.o -o test/bin/TestGPUSparseMatrix.exe $(GPULFLAGS)
+
+test/bin/TestGPUSparseMatrix.o: test/TestGPUSparseMatrix.cpp
+	$(GPUCC) $(GPUCFLAGS) test/TestGPUSparseMatrix.cpp -c -o test/bin/TestGPUSparseMatrix.o $(IFLAGS)
 
 clean:
 	rm -rf bin/*

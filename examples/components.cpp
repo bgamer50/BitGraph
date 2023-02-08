@@ -77,27 +77,27 @@ int main(int argc, char* argv[]) {
 
     try {
         start = std::chrono::system_clock::now();
-        //g->V()->property("d", __->out()->count())->iterate();
+        //g->V()->property("d", out()->count())->iterate();
         /*
         std::list<Vertex*> vertices = graph.vertices();
         for(auto it = vertices.begin(); it != vertices.end(); ++it) {
             Vertex* v = *it;
             std::cout << boost::any_cast<size_t>(v->property("d")->value()) << std::endl;
         }*/
-        g->V()->property("cc", __->id())->iterate();
-        g->V()->property("old_cc", __->values("cc"))->iterate();
+        g->V()->property("cc", id())->iterate();
+        g->V()->property("old_cc", values("cc"))->iterate();
         /*
         The old traversal
         for(int k = 0; k < 1; ++k) {
-            g->V()->property("cc", __->coalesce({__->both(), __->identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
+            g->V()->property("cc", coalesce({both(), identity()})->values("cc")->min(C<uint64_t>::compare()))->iterate();
         }
         */
         g->V()->repeat(
-                __->property("old_cc", __->values("cc"))
-                ->property("cc", __->both()->values("cc")->min(C<uint64_t>::compare()))
+                property("old_cc", values("cc"))
+                ->property("cc", both()->values("cc")->min(C<uint64_t>::compare()))
         )
         ->until(
-            __->valueMap({"cc","old_cc"})->by(__->unfold())
+            valueMap({"cc","old_cc"})->by(unfold())
             ->where("cc", P::neq("old_cc"))
             ->count()
             ->is(0)

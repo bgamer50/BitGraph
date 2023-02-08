@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     g->addV()->property("name","bill")->property("age",40)->property("height", 72)->iterate();
     g->addV()->property("name","george")->property("age",25)->property("height", 67)->iterate();
 
-    g->V()->valueMap({"name","age","height"})->by(__->unfold())->where("age", P::gte(30))->forEachRemaining([](boost::any t){
+    g->V()->valueMap({"name","age","height"})->by(unfold())->where("age", P::gte(30))->forEachRemaining([](boost::any t){
         valuemap_t vm = boost::any_cast<valuemap_t>(t);
         print_valuemap(vm);
     });

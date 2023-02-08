@@ -1,9 +1,9 @@
-#ifndef GPU_UNBIND_STEP_H
-#define GPU_UNBIND_STEP_H
+#pragma once
 
 #define GPU_UNBIND_STEP 0x2f
 
 #include "step/TraversalStep.h"
+#include "step/gpu/GPUTraversalHelper.h"
 
 class GPUUnbindStep : public TraversalStep {
     private:
@@ -40,5 +40,3 @@ class GPUUnbindStep : public TraversalStep {
             return "GPUUnbindStep{}";
         }
 };
-
-#endif
