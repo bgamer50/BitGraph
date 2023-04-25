@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <boost/any.hpp>
 
-#include "structure/GPUGraph.h"
+#include "structure/GPUGraph.cuh"
 
 // somewhat similar to VertexProgram
 class GPUGraphAlgorithm {

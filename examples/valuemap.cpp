@@ -1,6 +1,6 @@
 #include "traversal/GraphTraversal.h"
 #include "structure/CPUGraph.h"
-#include "util/gremlin_utils.hpp"
+#include "util/gremlin_utils.h"
 #include <vector>
 #include <string>
 #include <unordered_map>

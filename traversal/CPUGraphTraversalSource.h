@@ -1,5 +1,4 @@
-#ifndef CPU_GRAPH_TRAVERSAL_SOURCE_H
-#define CPU_GRAPH_TRAVERSAL_SOURCE_H
+#pragma once
 
 #include "traversal/GraphTraversalSource.h"
 
@@ -20,5 +19,3 @@ CPUGraphTraversalSource::CPUGraphTraversalSource(CPUGraph* gr)
 			bitgraph_strategy(static_cast<CPUGraph*>(this->getGraph()), t);
 		});
 }
-
-#endif

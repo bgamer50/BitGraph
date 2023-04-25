@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <memory>
 #include <boost/any.hpp>
-#include "structure/Element.h"
+#include "gremlinxx/gremlinxx.h"
 
 typedef std::function<int64_t(boost::any&)> HashFunction;
 typedef std::function<bool(boost::any&, boost::any&)> EqualsFunction;

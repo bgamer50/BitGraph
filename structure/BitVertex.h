@@ -1,5 +1,4 @@
-#ifndef BIT_VERTEX_H
-#define BIT_VERTEX_H
+#pragma once
 
 #define VERTEX_MAGIC_NUMBER 15134994420398101408ull
 
@@ -11,10 +10,11 @@
 #include <unordered_map>
 #include <boost/any.hpp>
 
-#include "structure/Vertex.h"
-#include "structure/Direction.h"
-#include "structure/BitEdge.h"
-#include "structure/CPUGraph.h"
+#include "gremlinxx/gremlinxx.h"
+
+class CPUGraph;
+class BitVertex;
+class BitEdge;
 
 /*
 Vertex type that uses a uint64_t for identifiers,
@@ -74,9 +74,7 @@ class BitVertex : public Vertex {
 		/*
 			Return the Graph this Vertex belongs to.
 		*/
-		virtual Graph* getGraph() {
-			return static_cast<Graph*>(this->graph);
-		}
+		virtual Graph* getGraph();
 		
 		/*
 			Get the unique id of the Vertex.
@@ -109,110 +107,34 @@ class BitVertex : public Vertex {
 			given direction.  Checks to make
 			sure the Edge makes sense.
 		*/
-		void addEdge(BitEdge* new_edge, Direction dir) {
-			//add_edge_mutex.lock();
-
-			if(dir == OUT && new_edge->outV() == this) edges_out.push_back(new_edge);
-			else if(dir == IN && new_edge->inV() == this) edges_in.push_back(new_edge);
-
-			//add_edge_mutex.unlock();
-		}
+		void addEdge(BitEdge* new_edge, Direction dir);
 
 		/*
 			Get edges in a particular direction.
 		*/
-		virtual std::vector<Edge*> edges(Direction dir) {
-			switch(dir) {
-				case OUT: {
-					return std::vector<Edge*>{this->edges_out.begin(), this->edges_out.end()};
-				}
-				case IN: {
-					return std::vector<Edge*>{this->edges_in.begin(), this->edges_in.end()};
-				}
-				case BOTH: 
-				default: {
-					std::vector<Edge*> both_edges;
-					both_edges.insert(both_edges.end(), this->edges_in.begin(), this->edges_in.end());
-					both_edges.insert(both_edges.end(), this->edges_out.begin(), this->edges_out.end());
-
-					return both_edges;
-				}
-			}
-		}
+		virtual std::vector<Edge*> edges(Direction dir);
 
 		/*
 			Get the property with the given key.
 		*/		
-		virtual Property* property(std::string key) {
-			auto v = this->my_properties.find(key);
-			if(v == my_properties.end()) return nullptr;
-			return v->second;
-		}
+		virtual Property* property(std::string key);
 
 		/*
 			Get all the properties with the given keys.
 			Should support multiproperties if available.
 		*/
-		virtual std::vector<Property*> properties(std::vector<std::string> keys) {
-			std::vector<Property*> props;
-			if(keys.empty()) {
-				props.resize(this->my_properties.size());
-				size_t i = 0;
-				for(std::pair<std::string, VertexProperty*> p : this->my_properties) props[i++] = p.second;
-			} 
-			else {
-				props.resize(keys.size());
-				size_t i = 0;
-				for(std::string& key : keys) props[i++] = this->property(key);
-			}
-
-			return props;
-		}
+		virtual std::vector<Property*> properties(std::vector<std::string> keys);
 
 		/*
 			Set the property with the given key to the given value.
 		*/
-		virtual Property* property(Cardinality card, std::string key, boost::any& value) {
-			auto old_prop = this->my_properties.find(key);
-			
-			// Update the indexes if necessary.
-			if(this->graph->is_indexed(key)) {
-				/*
-				If the cardinality is single and there is already an entry for it,
-				then clear the index.
-				*/
-				if(card == SINGLE && old_prop != this->my_properties.end()) {
-					this->graph->clear_index(this, key, old_prop->second->value());
-				}
-
-				// Perform the index update.  This should be fine for set cardinality.
-				graph->update_index(this, key, value);
-
-			}
-
-			if(card == SINGLE) {
-				this->my_properties[key] = new VertexProperty(key, value);
-			}
-			else if(card == SET || card == LIST) { //TODO support list/set
-				throw std::runtime_error("Multiproperties currently unsupported!");
-			}
-			else {
-				throw std::runtime_error("Illegal cardinality!");
-			}
-
-			return this->my_properties[key];
-		}
+		virtual Property* property(Cardinality card, std::string key, boost::any& value);
 
 		/*
 			Set the property with the given key to the given value.
 		*/
-		virtual Property* property(std::string key, boost::any& value) {
-			return this->property(SINGLE, key, value);
-		}
+		virtual Property* property(std::string key, boost::any& value);
 
-		virtual std::vector<Property*> properties() {
-			return this->properties({});
-		}
+		virtual std::vector<Property*> properties();
 };
 
-#endif

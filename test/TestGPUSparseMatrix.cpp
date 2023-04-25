@@ -5,7 +5,7 @@
 #include <cuda_runtime.h>
 
 #include "structure/matrix/CPUSparseMatrix.h"
-#include "structure/matrix/GPUSparseMatrix.h"
+#include "structure/matrix/GPUSparseMatrix.cuh"
 
 using namespace bitgraph::matrix;
 using namespace bitgraph::test;

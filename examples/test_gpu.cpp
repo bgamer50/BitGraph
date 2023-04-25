@@ -4,7 +4,7 @@ Written by Alexandria Barghi
 */
 
 #include "structure/CPUGraph.h"
-#include "structure/GPUGraph.h"
+#include "structure/GPUGraph.cuh"
 #include "structure/reference/ReferenceVertex.h"
 #define NAME "name"
 

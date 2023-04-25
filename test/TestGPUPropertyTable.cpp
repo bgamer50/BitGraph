@@ -1,5 +1,5 @@
 #include "traversal/Comparison.h"
-#include "structure/memory/GPUPropertyTable.h"
+#include "structure/memory/GPUPropertyTable.cuh"
 
 int main(int argc, char* argv[]) {
     try {
