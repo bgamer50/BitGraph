@@ -210,25 +210,24 @@ namespace bitgraph {
             // This COO needs to be reversed and transformed back to CSR
             // out_ix_left will become the new column pointer
 
-            thrust::device_ptr<size_t> in_col_ptr_tptr = thrust::device_pointer_cast(device_matrix.col_ptr);
+
             // have to create a copy of the col ptr since it needs to be resorted
             size_t* resorted_col_ptr;
             cudaMalloc(&resorted_col_ptr, sizeof(size_t) * device_matrix.nnz);
-            thrust::device_ptr<size_t> resorted_col_ptr_tptr = thrust::device_pointer_cast(resorted_col_ptr);
 
             thrust::copy(
                 thrust::device,
-                in_col_ptr_tptr,
-                in_col_ptr_tptr + device_matrix.nnz,
-                resorted_col_ptr_tptr
+                thrust::device_pointer_cast(device_matrix.col_ptr),
+                thrust::device_pointer_cast(device_matrix.col_ptr) + device_matrix.nnz,
+                thrust::device_pointer_cast(resorted_col_ptr)
             );
 
             if(device_matrix.values == nullptr) {
                 // out_row_ptr is in order so doing a stable sort on col_ptr will ensure correct order.
                 thrust::stable_sort_by_key(
                     thrust::device,
-                    resorted_col_ptr_tptr,
-                    resorted_col_ptr_tptr + device_matrix.nnz,
+                    thrust::device_pointer_cast(resorted_col_ptr),
+                    thrust::device_pointer_cast(resorted_col_ptr) + device_matrix.nnz,
                     thrust::device_pointer_cast<size_t>(out_ix_left)
                 );
             }
@@ -247,36 +246,39 @@ namespace bitgraph {
             size_t* row_keys;
             cudaMalloc(&row_keys, sizeof(size_t) * device_matrix.num_rows);
 
-            size_t* out_row_ptr;
-            cudaMalloc(&out_row_ptr, sizeof(size_t) * (device_matrix.num_rows + 1));
-            cudaMemset(out_row_ptr, 0, sizeof(size_t) * (device_matrix.num_rows + 1)); // set all elements to 0 (necessary because some rows may be blanks)
-            thrust::device_ptr<size_t> out_row_ptr_tptr = thrust::device_pointer_cast(out_row_ptr);
+            size_t* row_indices;
+            cudaMalloc(&row_indices, sizeof(size_t) * (device_matrix.num_rows + 1));
 
             auto new_end = thrust::reduce_by_key(
                 thrust::device,
-                resorted_col_ptr_tptr,
-                resorted_col_ptr_tptr + device_matrix.nnz,
+                thrust::device_pointer_cast(resorted_col_ptr),
+                thrust::device_pointer_cast(resorted_col_ptr) + device_matrix.nnz,
                 thrust::make_constant_iterator((size_t)1),
                 thrust::device_pointer_cast<size_t>(row_keys),
-                out_row_ptr_tptr + 1
+                thrust::device_pointer_cast(row_indices) + 1
             );
             cudaFree(resorted_col_ptr);
-            size_t num_non_empty_rows = new_end.second - out_row_ptr_tptr - 1;
+            size_t num_non_empty_rows = new_end.second - thrust::device_pointer_cast(row_indices) - 1;
+
+            size_t* out_row_ptr;
+            cudaMalloc(&out_row_ptr, sizeof(size_t) * (device_matrix.num_rows + 1));
+            cudaMemset(out_row_ptr, 0, sizeof(size_t) * (device_matrix.num_rows + 1)); // set all elements to 0 (necessary because some rows may be blanks)
 
             thrust::scatter(
                 thrust::device,
-                out_row_ptr_tptr + 1,
-                out_row_ptr_tptr + num_non_empty_rows + 1,
+                thrust::device_pointer_cast(row_indices) + 1,
+                thrust::device_pointer_cast(row_indices) + num_non_empty_rows + 1,
                 row_keys,
-                out_row_ptr_tptr + 1
+                thrust::device_pointer_cast(out_row_ptr) + 1
             );
             cudaFree(row_keys);
+            cudaFree(row_indices);
 
             thrust::inclusive_scan(
                 thrust::device,
-                out_row_ptr_tptr + 1,
-                out_row_ptr_tptr + device_matrix.num_rows + 1,
-                out_row_ptr_tptr + 1
+                thrust::device_pointer_cast(out_row_ptr) + 1,
+                thrust::device_pointer_cast(out_row_ptr) + device_matrix.num_rows + 1,
+                thrust::device_pointer_cast(out_row_ptr) + 1
             );
 
             sparse_matrix_device output_matrix;
@@ -345,21 +347,21 @@ namespace bitgraph {
             return host_matrix;
         }
 
-        template<>
+        template
         sparse_matrix_host<uint64_t> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<uint32_t> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<uint8_t> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<int64_t> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<int32_t> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<int8_t> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<float> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
-        template<>
+        template
         sparse_matrix_host<double> sparse_convert_device_to_host(sparse_matrix_device& device_matrix);
 
 

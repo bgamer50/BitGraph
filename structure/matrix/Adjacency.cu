@@ -98,34 +98,6 @@ namespace bitgraph {
             cudaMemcpyAsync(&N_prime, &result[N-1], sizeof(size_t) * 1, cudaMemcpyDefault, stream);
             cudaStreamSynchronize(stream);
             cudaCheckErrors("copy result to host");
-
-            bitgraph::memory::TypeErasedVector(
-                bitgraph::memory::memory_type::DEVICE,
-                gremlinxx::comparison::C::UINT64,
-                result,
-                N,
-                true
-            ).print();
-            std::cout << std::endl;
-
-            std::cout << "N prime: " << N_prime << std::endl;
-            bitgraph::memory::TypeErasedVector(
-                bitgraph::memory::memory_type::DEVICE,
-                gremlinxx::comparison::C::UINT64,
-                M.row_ptr,
-                M.num_rows,
-                true
-            ).print();
-            std::cout << std::endl;
-
-            bitgraph::memory::TypeErasedVector(
-                bitgraph::memory::memory_type::DEVICE,
-                gremlinxx::comparison::C::UINT64,
-                M.col_ptr,
-                M.nnz,
-                true
-            ).print();
-            std::cout << std::endl;
             
             cudaMallocAsync(&output, sizeof(size_t) * N_prime, stream);
             cudaMallocAsync(&output_origin, sizeof(size_t) * N_prime, stream);
@@ -136,8 +108,6 @@ namespace bitgraph {
             k_quadvv_get_adj<<<NUM_BLOCKS(N), BLOCK_SIZE, 0, stream>>>(M.row_ptr, M.col_ptr, static_cast<size_t*>(input_vertices.data()), result, output, output_origin, N);
             cudaStreamSynchronize(stream);
             cudaCheckErrors("k_quadvv_get_adj");
-            
-            std::cout << "k_quadvv_get_adj returned successfully!" << std::endl;
             
             bitgraph::memory::TypeErasedVector output_vec(
                 bitgraph::memory::memory_type::DEVICE,
@@ -156,8 +126,6 @@ namespace bitgraph {
                 true
             );
             output_origin_vec.own();
-
-            std::cout << "reached return statement in gpu_query_adjacency_v_to_v" << std::endl;
 
             return std::make_tuple(
                 std::move(output_vec),

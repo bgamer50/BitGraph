@@ -28,7 +28,6 @@ void GPUUnbindStep::apply(GraphTraversal* parent_traversal, TraverserSet& traver
     }
     
     traversers.swap(new_traversers);
-    //std::cout << "leave unbind step " << std::endl;
 }
 
 std::string GPUUnbindStep::getInfo() {

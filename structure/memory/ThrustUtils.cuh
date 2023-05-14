@@ -51,11 +51,5 @@ namespace bitgraph {
             }
         };
 
-        template<typename T>
-        inline thrust::device_ptr<T> device_tptr_cast(void* v) {
-            return thrust::device_pointer_cast<T>(
-                static_cast<T*>(v)
-            );
-        }
     }
 }

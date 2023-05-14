@@ -2,6 +2,8 @@
 
 #include "structure/memory/TypeErasure.cuh"
 #include <cuda_runtime.h>
+#include <utility>
+#include <optional>
 
 namespace bitgraph {
     namespace memory {
@@ -9,6 +11,6 @@ namespace bitgraph {
         template <typename B>
         __global__ void k_get_scan(B* ignore_values, void* retrieved_values, void* keys, size_t key_size, void* values, size_t value_size, void* desired_keys, size_t table_size, size_t N_desired);
 
-        TypeErasedVector get_scan(TypeErasedVector& keys, TypeErasedVector& values, TypeErasedVector& desired_keys);
+        std::pair<TypeErasedVector, TypeErasedVector> get_scan(TypeErasedVector& keys, TypeErasedVector& values, TypeErasedVector& desired_keys, bool return_indices=false);
     }
 }

@@ -80,6 +80,7 @@ target_include_directories(
     PUBLIC
         "/mnt/bitgraph" # bitgraph path
         "/mnt/gremlin++" # gremlinxx path
+        "/mnt/maelstrom" # maelstrom path
 )
 
 function(AddBitGraphExec EXEC_NAME)
@@ -97,6 +98,7 @@ function(AddBitGraphExec EXEC_NAME)
         PRIVATE
             bitgraph   
             "/mnt/gremlin++/libgremlinxx.a"
+            "/mnt/maelstrom/maelstrom.a"
     )
 
 endfunction()
@@ -127,3 +129,4 @@ function(AddBitGraphTest EXEC_NAME)
 endfunction()
 
 AddBitGraphTest(TestGPUHashTable.exe test/TestGPUHashTable.cu)
+AddBitGraphTest(TestGPUSparseMatrix.exe test/TestGPUSparseMatrix.cu)

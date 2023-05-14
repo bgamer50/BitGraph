@@ -6,10 +6,14 @@
 namespace bitgraph {
     namespace memory {
 
+        __device__ inline size_t raw_hash(size_t key) {
+            return key * (size_t)floor((double)BITGRAPH_HASH_MAGIC * pow((double)2, (double)64));
+        }
+
         __device__ inline size_t bitgraph_hash_fn(size_t key, size_t table_size, size_t iters, size_t max_chain_iters) {
             // rehash until max iters, then linear probe
             return  (iters < max_chain_iters)
-                    ? ((key + 1) * BITGRAPH_HASH_MAGIC) % table_size
+                    ? raw_hash(key) % table_size
                     : (key + 1) % table_size;
         }
 

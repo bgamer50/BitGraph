@@ -2,6 +2,9 @@
 #include "structure/memory/primitives/hash_primitives/HashBasic.cuh"
 
 #include "structure/memory/GPUHashConstants.h"
+#include "util/cuda_utils.cuh"
+
+#include <iostream>
 
 namespace bitgraph {
     namespace memory {
@@ -51,6 +54,8 @@ namespace bitgraph {
         size_t* hash_insert(void* keys, void* keys_new, size_t key_size, size_t table_size, size_t N_new) {
             size_t* insert_indices;
             cudaMalloc(&insert_indices, sizeof(size_t) * N_new);
+            cudaDeviceSynchronize();
+            cudaCheckErrors("allocate insert indices");
 
             size_t block_size = 128;
             size_t num_blocks = N_new / block_size + 1;
@@ -66,6 +71,8 @@ namespace bitgraph {
                 bitgraph_get_max_permitted_chain_hash_iterations(table_size),
                 bitgraph_get_max_permitted_hash_iterations(table_size)
             );
+            cudaDeviceSynchronize();
+            cudaCheckErrors("hash insert");
 
             return insert_indices;
         }

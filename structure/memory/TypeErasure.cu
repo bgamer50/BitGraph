@@ -1,5 +1,6 @@
 #include "structure/memory/TypeErasure.cuh"
 
+#include <sstream>
 #include <cuda_runtime.h>
 #include "util/cuda_utils.cuh"
 
@@ -24,7 +25,9 @@ namespace bitgraph {
                     void* ptr;
                     cudaMallocManaged(&ptr, dtype_size * N);
                     cudaDeviceSynchronize();
-                    cudaCheckErrors("TypeErasedVector alloc managed memory");
+                    std::stringstream sx;
+                    sx << "TypeErasedVector alloc managed memory (" << this->name << ")";
+                    cudaCheckErrors(sx.str());
                     return ptr;
                 }
                 case bitgraph::memory::memory_type::PINNED: {
@@ -48,7 +51,9 @@ namespace bitgraph {
                 case bitgraph::memory::memory_type::MANAGED: {
                     cudaFree(ptr);
                     cudaDeviceSynchronize();
-                    cudaCheckErrors("TypeErasedVector dealloc managed memory");
+                    std::stringstream sx;
+                    sx << "TypeErasedVector dealloc managed memory (" << this->name << ")";
+                    cudaCheckErrors(sx.str());
                     return;
                 }
                 case bitgraph::memory::memory_type::DEVICE: {
@@ -72,6 +77,15 @@ namespace bitgraph {
         void TypeErasedVector::copy(void* src, void* dst, size_t size) {
             cudaMemcpy(dst, src, gremlinxx::comparison::C_size[this->dtype] * size, cudaMemcpyDefault);
             cudaCheckErrors("TypeErasedVector copy");
+        }
+
+        void TypeErasedVector::clear() {
+            if(this->view) throw std::runtime_error("Cannot clear a view!");
+
+            this->dealloc(this->data_ptr);
+            this->filled_size = 0;
+            this->reserved_size = 0;
+            this->data_ptr = nullptr;
         }
 
         // Creates a blank vector with the given memory type and data type.
@@ -119,6 +133,15 @@ namespace bitgraph {
             }
         }
 
+        TypeErasedVector::TypeErasedVector(TypeErasedVector& orig, bool view)
+        : TypeErasedVector(
+            orig.mem_type,
+            orig.dtype,
+            orig.data_ptr,
+            orig.filled_size,
+            view
+        ) {}
+
         TypeErasedVector::TypeErasedVector(TypeErasedVector& orig) {
             this->mem_type = orig.mem_type;
             this->dtype = orig.dtype;
@@ -163,7 +186,13 @@ namespace bitgraph {
         }
 
         void TypeErasedVector::reserve(size_t N) {
-            throw std::runtime_error("reserve unimplemented");
+            if(N < this->filled_size) throw std::runtime_error("Cannot reserve fewer elements than size!");
+            
+            if(N <= this->reserved_size) return;
+
+            size_t old_filled_size = this->filled_size;
+            this->resize(N);
+            this->filled_size = old_filled_size;
         }
 
         void TypeErasedVector::insert() {
@@ -178,8 +207,6 @@ namespace bitgraph {
             size_t new_size = old_size + new_elements.size();
             
             void* new_data = this->data_ptr;
-            std::cout << "new size: " << new_size << std::endl;
-            std::cout << "reserved size: " << reserved_size << std::endl;
             if(new_size > reserved_size) {
                 new_data = this->alloc(new_size);
                 this->reserved_size = new_size;   
@@ -237,7 +264,7 @@ namespace bitgraph {
             bool empty = (this->reserved_size == 0);
             
             // Don't resize if there is already enough space reserved
-            if(N < reserved_size) {
+            if(N <= reserved_size) {
                 this->filled_size = N;
                 return;
             }
@@ -253,6 +280,16 @@ namespace bitgraph {
             this->reserved_size = N;
         }
 
+        TypeErasedVector TypeErasedVector::to(bitgraph::memory::memory_type mem_type) {
+            auto new_vec = TypeErasedVector(
+                mem_type,
+                this->get_dtype()
+            );
+
+            new_vec.insert(0, *this);
+            return new_vec;
+        }
+
         TypeErasedVector make_vector_like(TypeErasedVector& other, size_t N) {
             return TypeErasedVector(
                 other.get_mem_type(),
@@ -261,5 +298,112 @@ namespace bitgraph {
             );
         }
 
+        TypeErasedVector make_vector_from_anys(std::vector<boost::any>& anys, bitgraph::memory::memory_type mem_type, StringIndex* string_index) {
+            gremlinxx::comparison::C dtype = gremlinxx::comparison::from_any(anys.front());
+            size_t value_size = gremlinxx::comparison::C_size[dtype];
+            unsigned char* data = new unsigned char[value_size * anys.size()];
+
+            bool is_string = (dtype == gremlinxx::comparison::C::STRING);
+            size_t i = 0;
+            if(is_string) {
+                if(string_index == nullptr) throw std::runtime_error("Cannot store type-erased strings without string index!");
+                auto converted_values = string_index->from_cpu_anys(anys);
+                for(boost::any& b : converted_values) {
+                    void* ptr = static_cast<void*>(data + (i * value_size));
+                    gremlinxx::comparison::move_any(b, ptr);
+                    ++i;
+                }
+                    
+            } else {
+                for(boost::any& b : anys) {
+                    void* ptr = static_cast<void*>(data + (i * value_size));
+                    gremlinxx::comparison::move_any(b, ptr);
+                    ++i;
+                }
+            }
+
+            auto host_values = TypeErasedVector(
+                bitgraph::memory::memory_type::HOST,
+                dtype,
+                static_cast<void*>(data),
+                anys.size(),
+                false
+            );
+
+            if(mem_type == bitgraph::memory::memory_type::HOST) {
+                return host_values;
+            }
+            
+            return host_values.to(mem_type);
+        }
+
+        std::vector<boost::any> vector_to_anys(TypeErasedVector& vec, StringIndex* string_index) {
+            size_t N = vec.size();
+            auto dtype = vec.get_dtype();
+            bool is_string = (dtype == gremlinxx::comparison::C::STRING);
+            size_t value_size = gremlinxx::comparison::C_size[dtype];
+
+            std::vector<boost::any> output_vector;
+            output_vector.resize(N);
+
+            if(vec.get_mem_type() == bitgraph::memory::memory_type::HOST) {
+                unsigned char* data = static_cast<unsigned char*>(vec.data());
+                for(size_t k = 0; k < N; ++k) { 
+                    output_vector[k] = gremlinxx::comparison::move_void(static_cast<void*>(data + (k * value_size)), dtype);
+                }
+            } else {
+                auto vec_host = vec.to(bitgraph::memory::memory_type::HOST);
+                unsigned char* data = static_cast<unsigned char*>(vec_host.data());
+                for(size_t k = 0; k < N; ++k) { 
+                    output_vector[k] = gremlinxx::comparison::move_void(static_cast<void*>(data + (k * value_size)), dtype);
+                }
+            }
+
+            if(is_string) {
+                if(string_index == nullptr) throw std::runtime_error("String index required to convert type erased strings");
+                return string_index->from_gpu_anys(output_vector);
+            } 
+
+            return output_vector;
+        }
+
+        template<typename T>
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<T>& typed_vector) {
+            return TypeErasedVector(
+                bitgraph::memory::memory_type::HOST,
+                gremlinxx::comparison::C_TYPEID<T>(),
+                static_cast<void*>(typed_vector.data()),
+                typed_vector.size(),
+                true
+            );
+        }
+
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<uint64_t>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<uint32_t>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<uint8_t>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<int64_t>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<int32_t>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<int8_t>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<float>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<double>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<std::string>& typed_vector);
+        template
+        TypeErasedVector make_viewing_vector_from_typed(std::vector<Vertex*>& typed_vector);
+
+        bool are_mem_types_compatible(bitgraph::memory::memory_type t1, bitgraph::memory::memory_type t2) {
+            if(t1 == t2) return true;
+            else if(t1 == bitgraph::memory::memory_type::PINNED || t2 == bitgraph::memory::memory_type::PINNED) return false;
+            else if(t1 == bitgraph::memory::memory_type::MANAGED || t2 == bitgraph::memory::memory_type::MANAGED) return true;
+            return false;
+        }
     }
 }

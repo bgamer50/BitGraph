@@ -1,4 +1,4 @@
-#include "step/gpu/GPUTraversalHelper.cuh"
+#include "traversal/GPUTraverserSet.cuh"
 
 #include "util/cuda_utils.cuh"
 
@@ -8,6 +8,60 @@
 #include "structure/GPUGraph.cuh"
 #include "structure/memory/ThrustUtils.cuh"
 
+namespace bitgraph {
+    namespace traversal {
+        
+        TraverserSet GPUTraverserSet::to_cpu_traversers(GraphTraversal* parent_traversal, StringIndex* string_index) {
+            auto traverser_data_anys = bitgraph::memory::vector_to_anys(
+                this->traverser_data,
+                string_index
+            );
+
+            std::unordered_map<std::string, std::vector<boost::any>> side_effects_anys;
+            for(auto e = this->side_effects.begin(); e != this->side_effects.end(); ++e) {
+                side_effects_anys[e->first] = bitgraph::memory::vector_to_anys(
+                    e->second,
+                    string_index
+                );
+            }
+
+            if(this->persist_paths) {
+                throw std::runtime_error("persist paths currently unsupported!");
+            }
+
+            TraverserSet new_traversers(this->size());
+            for(size_t k = 0; k < new_traversers.size(); ++k) {
+                // Fill traverser data
+                new_traversers[k].replace_data(traverser_data_anys[k]);
+
+                // Fill traverser side effects
+                for(auto se = side_effects_anys.begin(); se != side_effects_anys.end(); ++se) {
+                    auto se_value = se->second[k];
+                    new_traversers[k].get_side_effects()[se->first] = se_value;
+                }
+
+                // Fill traverser paths
+                if(this->persist_paths) {
+                    throw std::runtime_error("persist paths currently unsupported!");
+                }
+            }
+        }
+
+        void GPUTraverserSet::from_cpu_traversers(TraverserSet& cpu_traversers, StringIndex* string_index) {
+            this->clear();
+
+            
+        }
+
+        void GPUTraverserSet::clear() {
+            this->traverser_data.clear();
+            this->paths.clear();
+            this->side_effects.clear();
+        }
+
+    }
+}
+
 /**
     Copy data from a traversal over graph elements (Vertex,Edge)
     to the GPU.
@@ -15,8 +69,6 @@
 template<typename T>
 void* to_gpu(TraverserSet& traversers) {
     const size_t sz = traversers.size();
-    std::cout << "# traversers: " << sz << std::endl;
-    std::cout << "trv size: " << sizeof(T) << std::endl;
 
     T* gpu_traversers;
     cudaMalloc((void**) &gpu_traversers, sizeof(T) * sz);
@@ -44,7 +96,6 @@ void* to_gpu(TraverserSet& traversers) {
 template<>
 void* to_gpu<Vertex*>(TraverserSet& traversers) {
     const size_t sz = traversers.size();
-    std::cout << "# traversers: " << sz << std::endl;
 
     size_t* gpu_traversers;
     cudaMalloc((void**) &gpu_traversers, sizeof(size_t) * sz);
@@ -182,7 +233,11 @@ std::vector<size_t> collapse_path(gpu_traverser_info_t& traverser_info, bool fre
             d_ptr_OO
         );
 
-        if(free_memory) cudaFree(it->first);
+        if(free_memory) {
+            cudaFree(it->first);
+            cudaDeviceSynchronize();
+            cudaCheckErrors("free path data");
+        }
     }
 
     std::vector<size_t> returned_oo_cpu(OO_size);
@@ -193,6 +248,7 @@ std::vector<size_t> collapse_path(gpu_traverser_info_t& traverser_info, bool fre
     if(free_memory) cudaFree(OO);
     cudaDeviceSynchronize();
     cudaCheckErrors("free output origin");
+    
     return returned_oo_cpu;
 }
 
@@ -246,24 +302,23 @@ void retrieve_new_traversers<Vertex*>(GraphTraversal* parent_traversal, Traverse
 }
 
 template
-void retrieve_new_traversers<uint64_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<uint64_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<uint32_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<uint32_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<uint8_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<uint8_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<int64_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<int64_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<int32_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<int32_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<int8_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<int8_t>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<double>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<double>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 template
-void retrieve_new_traversers<float>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
+TraverserSet retrieve_new_traversers<float>(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info);
 
-void C_RETRIEVE_NEW_TRAVERSERS(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
-    std::cout << "retrieving data type: " << gremlinxx::comparison::C_to_string[traverser_info.traverser_dtype] << std::endl;
+TraverserSet gpu_traversers_to_cpu_traversers(GraphTraversal* parent_traversal, TraverserSet& output_traversers, gpu_traverser_info_t& traverser_info) {
     switch(traverser_info.traverser_dtype) {
         case gremlinxx::comparison::C::UINT64:
             return retrieve_new_traversers<uint64_t>(parent_traversal, output_traversers, traverser_info);

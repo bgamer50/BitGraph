@@ -1,7 +1,8 @@
-#pragma once
+	#pragma once
 
 #define CPUGRAPH_INITIAL_LIST_SIZE 100000
 
+#include "maelstrom/storage/datatype.h"
 #include "gremlinxx/gremlinxx.h"
 #include "index/Index.h"
 #include <string>
@@ -21,12 +22,22 @@ class CPUGraph : public Graph {
 		uint64_t next_edge_id = 0;
 		uint64_t next_vertex_id = 0;
 		uint64_t num_vertices = 0;
+		maelstrom::dtype_t maelstrom_vertex_dtype;
 	public:
 
 		/*
 			Main constructor for the CPUGraph.
 		*/
-		CPUGraph(): Graph() {}
+		CPUGraph(): Graph() {
+			maelstrom::dtype_t bitgraph_vertex_t{
+				"bitgraph_cpu_vertex",
+				maelstrom::primitive_t::UINT64,
+				[this](void* v){ return boost::any(this->vertex_list[*static_cast<uint64_t*>(v)]); },
+				[this](boost::any b) { return boost::any(this->vertex_list[boost::any_cast<uint64_t>(b)]); }
+			};
+
+			this->maelstrom_vertex_dtype = bitgraph_vertex_t;
+		}
 
 		/*
 			A copy of the vector containing the CPUGraph's vertices.
@@ -72,6 +83,8 @@ class CPUGraph : public Graph {
 			Adds a new Edge to this CPUGraph.
 		*/
 		virtual Edge* add_edge(Vertex* from_vertex, Vertex* to_vertex, std::string label);
+
+		virtual maelstrom::dtype_t get_vertex_dtype();
 
 		/*
 			Get a traversal source for this CPUGraph.

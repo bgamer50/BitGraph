@@ -17,12 +17,14 @@ namespace bitgraph {
             public:
                 GPUHashTable(bitgraph::memory::memory_type mem_type, gremlinxx::comparison::C key_dtype, gremlinxx::comparison::C val_dtype, size_t reserved_size=0);
 
+                GPUHashTable();
+
                 /*
                     This method sets the given keys to the given values.
                 */
                 void set(TypeErasedVector& new_keys, TypeErasedVector& new_values);
 
-                TypeErasedVector get(TypeErasedVector& desired_keys, bool strict=true);
+                std::pair<TypeErasedVector, TypeErasedVector> get(TypeErasedVector& desired_keys, bool strict=true, bool return_indices=false);
 
                 void resize(size_t new_table_size);
 

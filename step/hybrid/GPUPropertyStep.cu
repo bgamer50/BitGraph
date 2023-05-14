@@ -32,24 +32,31 @@ void GPUPropertyStep::apply(GraphTraversal* traversal, TraverserSet& traversers)
             throw std::runtime_error("Traverser dtype was not of vertex type!");
         }
 
-        gremlinxx::comparison::C current_dtype = property_table.get_dtype(
+        gremlinxx::comparison::C first_dtype = property_table.get_dtype(
             this->keys.front()
         );
-        std::cout << "current dtype: " << gremlinxx::comparison::C_to_string[current_dtype] << std::endl;
         
-        size_t* originating_indices;
-        void* current_values;
-        size_t num_current_values;
-        std::tie(
-            originating_indices,
-            current_values,
-            num_current_values
-            ) = property_table.get_property_values_device(
-                static_cast<size_t*>(traverser_info.traversers), // traversers over vertices are actually gpu vertex ids (NOT pointers)
-                traverser_info.num_traversers,
-                this->keys.front(),
-                false // traversal semantics imply a non-strict search (it is ok if not all vertices have this value)
+        auto elements_of_interest = TypeErasedVector(
+            bitgraph::memory::memory_type::DEVICE,
+            gremlinxx::comparison::C::UINT64,
+            traverser_info.traversers,
+            traverser_info.num_traversers,
+            false
         );
+        elements_of_interest.name = "elements of interest";
+
+        std::cout << "about to query property table" << std::endl;
+        TypeErasedVector current_values;
+        TypeErasedVector originating_indices;
+        std::tie(current_values, originating_indices) = property_table.get_property_values(
+            this->keys.front(),
+            elements_of_interest,
+            false,
+            true
+        );
+        cudaDeviceSynchronize();
+        cudaCheckErrors("get property values");
+
         cudaDeviceSynchronize();
         cudaCheckErrors("GPUPropertyStep: get values for first key");
 
@@ -57,57 +64,66 @@ void GPUPropertyStep::apply(GraphTraversal* traversal, TraverserSet& traversers)
             std::string property_key = *it;
             auto next_dtype = property_table.get_dtype(property_key);
             
-            size_t* next_originating_indices;
-            void* next_values;
-            size_t num_next_values;
+            TypeErasedVector next_originating_indices;
+            TypeErasedVector next_values;
 
-            std::tie(
-                next_originating_indices,
-                next_values,
-                num_next_values
-                ) = property_table.get_property_values_device(
-                    static_cast<size_t*>(traverser_info.traversers), // traversers over vertices are actually gpu vertex ids (NOT pointers)
-                    traverser_info.num_traversers,
-                    property_key,
-                    false // traversal semantics imply a non-strict search (it is ok if not all vertices have this value)
+            std::tie(next_values, next_originating_indices) = property_table.get_property_values(
+                property_key,
+                elements_of_interest,
+                false,
+                true
             );
+
             cudaDeviceSynchronize();
-            cudaCheckErrors("GPUPropertyStep: get values for first key");
+            cudaCheckErrors("GPUPropertyStep: get values for additional key");
 
-            void* oi;
-            std::tie(oi, std::ignore, std::ignore) = bitgraph::memory::device_array_combine(
-                originating_indices,
-                gremlinxx::comparison::UINT64,
-                num_current_values,
-                next_originating_indices,
-                gremlinxx::comparison::UINT64,
-                num_next_values
-            );
-            originating_indices = static_cast<size_t*>(oi);
+            originating_indices.insert(originating_indices.size(), next_originating_indices);
+            next_originating_indices.clear();
+
             cudaDeviceSynchronize();
             cudaCheckErrors("GPUPropertyStep: update originating indices");
 
-            std::tie(current_values, current_dtype, num_current_values) = bitgraph::memory::device_array_combine(
-                current_values,
+            void* current_values_data = current_values.data();
+            size_t num_current_values = current_values.size();
+            gremlinxx::comparison::C current_dtype = current_values.get_dtype();
+            current_values.disown(); // device_array_combine does its own deletion
+
+            void* next_values_data = next_values.data();
+            size_t num_next_values = next_values.size();
+            next_values.disown(); // device_array_combine does its own deletion
+            
+            std::tie(current_values_data, current_dtype, num_current_values) = bitgraph::memory::device_array_combine(
+                current_values_data,
                 current_dtype,
                 num_current_values,
-                next_values,
+                next_values_data,
                 next_dtype,
                 num_next_values
             );
             cudaDeviceSynchronize();
-            cudaCheckErrors("GPUPropertyStep: update curent values");
+            cudaCheckErrors("GPUPropertyStep: update current values");
+
+            current_values = TypeErasedVector(
+                bitgraph::memory::memory_type::DEVICE,
+                current_dtype,
+                current_values_data,
+                num_current_values,
+                false
+            );
         }
 
-        traverser_info.traversers = current_values;
-        traverser_info.num_traversers = num_current_values;
-        traverser_info.traverser_dtype = current_dtype;
+        traverser_info.traversers = current_values.data();
+        traverser_info.num_traversers = current_values.size();
+        traverser_info.traverser_dtype = current_values.get_dtype();
         traverser_info.paths.push_back(
             std::make_pair(
-                originating_indices,
-                num_current_values       
+                static_cast<size_t*>(originating_indices.data()),
+                current_values.size()
             )
         );
+
+        current_values.disown();
+        originating_indices.disown();
 
         trv.replace_data(traverser_info);
     }

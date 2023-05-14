@@ -1,3 +1,5 @@
+#include <tuple>
+
 #include "structure/memory/GPUHashTable.cuh"
 
 #include "structure/memory/primitives/hash_primitives/HashFilterValid.cuh"
@@ -29,42 +31,76 @@ namespace bitgraph {
             }
         }
 
+        GPUHashTable::GPUHashTable()
+        : GPUHashTable(bitgraph::memory::memory_type::MANAGED, gremlinxx::comparison::C::UINT64, gremlinxx::comparison::C::UINT64, 0) {}
+
          /*
             This method sets the given keys to the given values.
         */
         void GPUHashTable::set(TypeErasedVector& new_keys, TypeErasedVector& new_values) {
+            if(new_keys.get_dtype() != this->keys.get_dtype()) throw std::runtime_error("New keys datatype must match existing keys datatype");
+            if(new_values.get_dtype() != this->values.get_dtype()) throw std::runtime_error("New values datatype must match existing values datatype");
             if(new_keys.size() != new_values.size()) throw std::runtime_error("Keys and values must be of same length!");
-            size_t new_size = this->num_elements_in_table + new_keys.size();
+
+            // Create views of the new keys and values so we can mess with them while still allowing pass by reference
+            TypeErasedVector new_keys_view = TypeErasedVector(new_keys, true);
+            TypeErasedVector new_values_view = TypeErasedVector(new_values, true);
+
+            // If we need to move the keys or values to the correct memory location, technically they're no longer views (which is ok)
+            // They will always be automatically cleaned up appropriately
+            if(new_keys_view.get_mem_type() != this->keys.get_mem_type()) new_keys_view = new_keys_view.to(this->keys.get_mem_type());
+            if(new_values_view.get_mem_type() != this->values.get_mem_type()) new_values_view = new_values_view.to(this->values.get_mem_type());
+
+            size_t new_key;
+            cudaMemcpy(&new_key, new_keys.data(), sizeof(size_t), cudaMemcpyDefault);
+            if(new_key == 13) std::cout << "setting key #13" << std::endl;
+            
+            size_t new_size = this->num_elements_in_table + new_keys_view.size();
             size_t expected_fill_factor = new_size / this->keys.size();
+            
             if(this->keys.size() == 0 || expected_fill_factor > this->max_fill_factor) {
                 this->resize(new_size * 2 + 1);
             }
             
             size_t* insert_indices = hash_insert(
                 this->keys.data(),
-                new_keys.data(),
-                gremlinxx::comparison::C_size[new_keys.get_dtype()],
+                new_keys_view.data(),
+                gremlinxx::comparison::C_size[new_keys_view.get_dtype()],
                 this->keys.size(),
-                new_keys.size()
+                new_keys_view.size()
             );
+
+            if(new_key == 13) {
+                TypeErasedVector ii(
+                    bitgraph::memory::memory_type::DEVICE,
+                    gremlinxx::comparison::C::UINT64,
+                    insert_indices,
+                    new_keys_view.size(),
+                    true
+                );
+
+                std::cout << "ii for 13: ";
+                ii.print();
+            }
 
             bool should_rehash = thrust::any_of(
                 thrust::device,
                 thrust::device_pointer_cast<size_t>(insert_indices),
-                thrust::device_pointer_cast<size_t>(insert_indices) + new_keys.size(),
+                thrust::device_pointer_cast<size_t>(insert_indices) + new_keys_view.size(),
                 bitgraph::memory::is_max_val<size_t>()
             );
+
             if(should_rehash) {
-                std::cout << "rehashing before limit!" << std::endl;
+                std::cerr << "warning: rehashing before limit!" << std::endl;
                 cudaFree(insert_indices);
                 cudaCheckErrors("free insert_indices");
                 this->resize(this->keys.size() * 1.4 + 1);
 
-                return this->set(new_keys, new_values);
+                return this->set(new_keys_view, new_values_view);
             }
 
-            TypeErasedVector new_keys_copy(new_keys);
-            TypeErasedVector new_values_copy(new_values);
+            TypeErasedVector new_keys_copy(new_keys_view);
+            TypeErasedVector new_values_copy(new_values_view);
 
             set_sort(
                 insert_indices,
@@ -77,6 +113,8 @@ namespace bitgraph {
 
             size_t* diffs;
             cudaMalloc(&diffs, sizeof(size_t) * new_values.size());
+            cudaDeviceSynchronize();
+            cudaCheckErrors("Allocate diffs");
 
             // Elements where adjacent difference is 0 will not be inserted,
             // and will be instead inserted in the next recursive call.
@@ -87,8 +125,12 @@ namespace bitgraph {
                 thrust::device_pointer_cast<size_t>(diffs) + 1
             );
             cudaMemset(diffs, 0xff, 1);
+            cudaDeviceSynchronize();
+            cudaCheckErrors("memset diffs");
 
-            size_t remaining_data_size = set_scatter(
+            size_t new_num_elements;
+            size_t remaining_data_size;
+            std::tie(new_num_elements, remaining_data_size) = set_scatter(
                 this->keys.data(),
                 new_keys_copy.data(),
                 new_keys_copy.get_dtype(),
@@ -97,14 +139,20 @@ namespace bitgraph {
                 new_values_copy.get_dtype(),
                 insert_indices,
                 diffs,
-                new_values_copy.size()
+                new_values_copy.size(),
+                this->keys.size()
             );
+            this->num_elements_in_table = new_num_elements;
+
+            
+            size_t val;
+            cudaMemcpy(&val, static_cast<size_t*>(this->keys.data())+108, sizeof(size_t), cudaMemcpyDefault);
+            if(new_key == 13) std::cout << "value of hashed #13: " << val << std::endl;
+            
 
             cudaFree(insert_indices);
             cudaFree(diffs);
             cudaCheckErrors("Free insert indices, diffs");
-
-            this->num_elements_in_table += new_keys.size() - remaining_data_size;
 
             if(remaining_data_size > 0) {
                 new_keys_copy.resize(remaining_data_size);
@@ -116,18 +164,41 @@ namespace bitgraph {
             }
         }
 
-        TypeErasedVector GPUHashTable::get(TypeErasedVector& desired_keys, bool strict) {
+        std::pair<TypeErasedVector, TypeErasedVector> GPUHashTable::get(TypeErasedVector& desired_keys, bool strict, bool return_indices) {
+            if(strict && return_indices) throw std::runtime_error("Returning indices is not compatible with strict mode");
+
             if(desired_keys.get_dtype() != this->keys.get_dtype()) {
                 throw std::runtime_error("Provided key type does not match key type in hash table!");
             }
 
-            TypeErasedVector retrieved_values = get_scan(
+            // Create views of the new keys and values so we can mess with them while still allowing pass by reference
+            TypeErasedVector desired_keys_view(desired_keys, true);
+
+            if(this->keys.size() == 0) {
+                if(strict) throw std::runtime_error("Table is empty!");
+                else return std::make_pair(
+                    bitgraph::memory::make_vector_like(this->values),
+                    TypeErasedVector()
+                );
+            }
+
+            // If we need to move the desired keys to the correct memory location, technically it is no longer a view (which is ok)
+            // They will always be automatically cleaned up appropriately
+            if(desired_keys_view.get_mem_type() != this->keys.get_mem_type()) desired_keys_view = desired_keys_view.to(this->keys.get_mem_type());
+
+            auto retrieved_values = get_scan(
                 this->keys,
                 this->values,
-                desired_keys
+                desired_keys_view,
+                return_indices
             );
 
-            if(strict && (retrieved_values.size() != desired_keys.size())) {
+            if(strict && (retrieved_values.first.size() != desired_keys_view.size())) {
+                
+                
+                std::cout << "desired keys: ";
+                desired_keys.print();
+
                 throw std::runtime_error("Some values were not found in the hash table for the provided keys");
             }
 

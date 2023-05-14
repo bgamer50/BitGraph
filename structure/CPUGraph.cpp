@@ -55,6 +55,10 @@ Edge* CPUGraph::add_edge(Vertex* out, Vertex* in, std::string label) {
 	return new_edge;
 }
 
+maelstrom::dtype_t CPUGraph::get_vertex_dtype() {
+	return this->maelstrom_vertex_dtype;
+}
+
 void CPUGraph::clear_index(BitVertex* v, std::string property_key, boost::any value) {
 	auto f = vertex_index.find(property_key);
 	if(f == vertex_index.end()) throw std::runtime_error("Property not indexed!\n");

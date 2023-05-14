@@ -6,6 +6,8 @@
 #include "structure/memory/ThrustUtils.cuh"
 #include "structure/memory/ArrayFunctions.cuh"
 
+#include "util/cuda_utils.cuh"
+
 // GET SCAN
 namespace bitgraph {
     namespace memory {  
@@ -54,7 +56,9 @@ namespace bitgraph {
             }
         }
 
-        TypeErasedVector get_scan(TypeErasedVector& keys, TypeErasedVector& values, TypeErasedVector& desired_keys) {
+        std::pair<TypeErasedVector, TypeErasedVector> get_scan(TypeErasedVector& keys, TypeErasedVector& values, TypeErasedVector& desired_keys, bool return_indices) {
+            if(keys.size() != values.size()) throw std::runtime_error("# keys must match # values");
+
             TypeErasedVector retrieved_values = bitgraph::memory::make_vector_like(values, desired_keys.size());
             
             TypeErasedVector ignore_values(
@@ -84,9 +88,38 @@ namespace bitgraph {
                 bitgraph_get_max_permitted_chain_hash_iterations(table_size),
                 bitgraph_get_max_permitted_hash_iterations(table_size)
             );
+            cudaDeviceSynchronize();
+            cudaCheckErrors("k_get_scan");
+
+            TypeErasedVector indices;
+
+            if(return_indices) {
+                indices = TypeErasedVector(
+                    desired_keys.get_mem_type(),
+                    gremlinxx::comparison::UINT64,
+                    desired_keys.size()
+                );
+
+                auto countit = thrust::make_counting_iterator((size_t)0);
+                auto new_end = thrust::remove_copy_if(
+                    thrust::device,
+                    countit,
+                    countit + desired_keys.size(),
+                    bitgraph::memory::device_tptr_cast<char>(ignore_values.data()),
+                    bitgraph::memory::device_tptr_cast<size_t>(indices.data()),
+                    thrust::identity<char>()
+                );
+
+                size_t new_size = new_end - bitgraph::memory::device_tptr_cast<size_t>(indices.data());
+                indices.resize(new_size);
+            }
 
             bitgraph::memory::remove_if(retrieved_values, ignore_values);
-            return retrieved_values;
+
+            return std::make_pair(
+                std::move(retrieved_values),
+                std::move(indices)
+            );
         }
 
     }

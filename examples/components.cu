@@ -80,6 +80,18 @@ int main(int argc, char* argv[]) {
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
 
+    gpu_graph.declare_property(
+        "cc",
+        gremlinxx::comparison::C::UINT64,
+        gpu_graph.num_vertices()
+    );
+
+    gpu_graph.declare_property(
+        "old_cc",
+        gremlinxx::comparison::C::UINT64,
+        gpu_graph.num_vertices()
+    );
+
     for(size_t r = 0; r < tries; ++r) {
         try {
             cudaProfilerStart();
@@ -87,6 +99,10 @@ int main(int argc, char* argv[]) {
 
             h->V()->property("cc", id())->iterate();
             h->V()->property("old_cc", values("cc"))->iterate();
+
+            //gpu_graph.get_property("cc", 13, true);
+            //gpu_graph.get_property("old_cc", 13, true);
+            //std::cout << "successfully got #13" << std::endl;
             
             size_t diff = 1;
             while(diff > 0) {

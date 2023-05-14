@@ -4,6 +4,7 @@
 #include "test/TestUtils.hpp"
 #include <assert.h>
 #include <cuda_runtime.h>
+#include <tuple>
 
 using namespace bitgraph::test;
 
@@ -47,7 +48,8 @@ void test_hash_basic() {
 
     table.set(keys, values);
 
-    auto acquired_values = table.get(keys);
+    bitgraph::memory::TypeErasedVector acquired_values;
+    std::tie(acquired_values, std::ignore) = table.get(keys);
     std::vector<float> host_acquired_values(acquired_values.size());
     assert( keys.size() == acquired_values.size() );
     cudaMemcpy(host_acquired_values.data(), acquired_values.data(), sizeof(float) * keys.size(), cudaMemcpyDefault);
@@ -143,7 +145,8 @@ void test_hash_double() {
     host_values.push_back(0.9f);
     host_values.push_back(0.14f);
 
-    auto acquired_values = table.get(keys);
+    bitgraph::memory::TypeErasedVector acquired_values;
+    std::tie(acquired_values, std::ignore) = table.get(keys);
     std::vector<float> host_acquired_values(acquired_values.size());
     assert( keys.size() == 10 );
     assert( keys.size() == acquired_values.size() );

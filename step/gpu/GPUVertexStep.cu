@@ -24,8 +24,6 @@ std::string GPUVertexStep::getInfo() {
 }
 
 void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
-    std::cout << "entering apply fn of GPUVertexStep" << std::endl;
-
     gpu_traverser_info_t traverser_info = boost::any_cast<gpu_traverser_info_t>(traversers.front().get());
     size_t* gpu_element_traversers = static_cast<size_t*>(traverser_info.traversers);
 
@@ -44,9 +42,6 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
 
     GPUGraph* gpu_graph = static_cast<GPUGraph*>(traversal->getGraph());
 
-    // Manipulate the graph's sparse matrix directly
-    bitgraph::matrix::sparse_matrix_device& adjacency_matrix = gpu_graph->access_adjacency_matrix();
-
     if(this->gs_type == VERTEX) {
         TypeErasedVector gpu_elements(
             bitgraph::memory::memory_type::DEVICE,
@@ -57,17 +52,13 @@ void GPUVertexStep::apply(GraphTraversal* traversal, TraverserSet& traversers) {
         );
         gpu_elements.own();
 
-        std::cout << "calling adjacency query" << std::endl;
         auto new_gpu_traversers = gpu_graph->query_adjacency(
             bitgraph::matrix::ADJ::VERTEX_TO_VERTEX,
             this->direction,
             gpu_elements
         );
-        std::cout << "adjacency query done!" << std::endl;
-        if(gpu_elements.size() == 0) std::cout << "bogus check to trick compiler" << std::endl;
-        // gpu elements will be cleaned up automatically;
-        // the owned original traversers will be cleaned up with it
-        std::cout << "out of scope now!" << std::endl;
+        
+        gpu_elements.clear();
 
         auto& new_traversers_v = std::get<0>(new_gpu_traversers);
         auto& output_origin_v = std::get<1>(new_gpu_traversers);
