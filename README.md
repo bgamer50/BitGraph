@@ -1,4 +1,5 @@
 Version 1.0.0 (Expected September 2023)
+
 This will be a major refactor of BitGraph that uses _Maelstrom_ for almost all operations, including sparse matrix operations, vector operations, and hash tables.
 Building on work from before, it will delegate even more work to Gremlin++ and its default set of steps, which have been significantly overhauled.
 Major performance and memory improvements are expected with this release.
