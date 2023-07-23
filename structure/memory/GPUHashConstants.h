@@ -1,3 +1,0 @@
-#pragma once
-
-#define BITGRAPH_HASH_MAGIC 10000000019
