@@ -103,6 +103,15 @@ namespace bitgraph {
 
             using gremlinxx::Graph::get_edge_dtype;
 			inline virtual maelstrom::dtype_t get_edge_dtype() { return this->edge_dtype; }
+
+			using gremlinxx::Graph::V;
+			virtual std::pair<maelstrom::vector, maelstrom::vector> V(maelstrom::vector& current_vertices, std::vector<std::string>& labels, gremlinxx::Direction direction);
+
+			using gremlinxx::Graph::E;
+			virtual std::pair<maelstrom::vector, maelstrom::vector> E(maelstrom::vector& current_vertices, std::vector<std::string>& labels, gremlinxx::Direction direction);
+
+			using gremlinxx::Graph::toV;
+			virtual std::pair<maelstrom::vector, maelstrom::vector> toV(maelstrom::vector& current_edges, gremlinxx::Direction direction);
     };
 
 }
