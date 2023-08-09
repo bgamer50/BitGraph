@@ -12,7 +12,7 @@ namespace bitgraph {
     gremlinxx::Vertex BitGraph::vertex_from_id(std::any v_id) {
         size_t vertex_id = std::any_cast<size_t>(
             maelstrom::safe_any_cast(v_id, maelstrom::uint64)
-            );
+        );
 
         std::string label = std::any_cast<std::string>(this->vertex_labels.get(vertex_id));
         return gremlinxx::Vertex{
@@ -40,25 +40,29 @@ namespace bitgraph {
         return maelstrom::dtype_t{
             "bitgraph_edge",
             raw_edge_dtype.prim_type,
-            [this, raw_edge_dtype](void* data) {
+            [this, raw_edge_dtype](void* data) { // deserialize
+                this->to_canonical_coo(); // have to transform to canonical coo representation first
+
                 std::vector<std::any> d_data_vec = {raw_edge_dtype.deserialize(data)};
                 auto m_data_vec = maelstrom::make_vector_from_anys(this->structure_storage, d_data_vec);
                 
                 maelstrom::vector rows, cols, vals, rels;
                 std::tie(rows, cols, vals, rels) = this->matrix->get_entries_1d(m_data_vec);
 
-                return gremlinxx::Edge{
-                    std::any_cast<std::string>(rels.get(0)),
-                    std::any_cast<size_t>(vals.get(0)),
-                    std::any_cast<Vertex>(rows.get(0)),
-                    std::any_cast<Vertex>(cols.get(0))
-                };
+                try {
+                    return gremlinxx::Edge{
+                        std::any_cast<std::string>(rels.get(0)),
+                        std::any_cast<size_t>(maelstrom::safe_any_cast(d_data_vec[0], maelstrom::uint64)),
+                        std::any_cast<Vertex>(rows.get(0)),
+                        std::any_cast<Vertex>(cols.get(0))
+                    };
+                } catch(std::bad_any_cast& err) {
+                    throw std::runtime_error("A bad any cast occured while trying to get an edge");
+                }
             },
-            [this, raw_edge_dtype](std::any data) {
+            [this, raw_edge_dtype](std::any data) { // serialize
                 gremlinxx::Edge e = std::any_cast<Edge>(data);
-                std::vector<std::any> anys = {e.id};
-                auto id_vec = maelstrom::make_vector_from_anys(this->structure_storage, this->edge_id_dtype, anys);
-                return maelstrom::safe_any_cast(this->matrix->get_1d_index_from_value(id_vec).get(0), raw_edge_dtype);
+                return maelstrom::safe_any_cast(e.id, raw_edge_dtype);
             }
         };
     }
@@ -71,7 +75,6 @@ namespace bitgraph {
 
         this->vertex_dtype = make_vertex_dtype(vertex_dtype);
         this->edge_dtype = make_edge_dtype(edge_dtype);
-        this->edge_id_dtype = edge_dtype;
         
         auto string_dtype = this->string_index.get_dtype();
 
@@ -83,9 +86,9 @@ namespace bitgraph {
 
         
         this->matrix = std::make_unique<maelstrom::basic_sparse_matrix>(
-            maelstrom::vector(structure_storage, vertex_dtype),
-            maelstrom::vector(structure_storage, vertex_dtype),
-            maelstrom::vector(structure_storage, edge_id_dtype),
+            maelstrom::vector(structure_storage, this->vertex_dtype),
+            maelstrom::vector(structure_storage, this->vertex_dtype),
+            maelstrom::vector(structure_storage, this->edge_dtype),
             maelstrom::vector(structure_storage, this->edge_label_index.get_dtype()),
             maelstrom::COO,
             0,
@@ -106,12 +109,14 @@ namespace bitgraph {
 
         // update matrix
         size_t total_num_vertices = this->matrix->num_rows() + n_new_vertices;
+        std::cout << "setting..." << std::endl;
         this->matrix->set(
             maelstrom::vector(),
             total_num_vertices,
             maelstrom::vector(),
             total_num_vertices
         );
+        std::cout << "done steting" << std::endl;
 
         // labels
         auto string_dtype = this->string_index.get_dtype();
@@ -124,22 +129,25 @@ namespace bitgraph {
         this->vertex_labels.insert(this->vertex_labels.size(), new_labels);
         new_labels.clear();
 
-
         auto new_vertices = maelstrom::arange(
             this->traverser_storage,
-            maelstrom::safe_any_cast(this->next_vertex_id, this->vertex_dtype),
-            maelstrom::safe_any_cast(this->next_vertex_id + n_new_vertices, this->vertex_dtype)
-        );
+            this->next_vertex_id,
+            this->next_vertex_id + n_new_vertices
+        ).astype(this->vertex_dtype);
         
         this->next_vertex_id += n_new_vertices;
         return new_vertices;
     }
 
     gremlinxx::Edge BitGraph::add_edge(Vertex from_vertex, Vertex to_vertex, std::string label) {
-        std::vector from_vertex_anys = {std::any(from_vertex)};
+        // Noting as usual that vertices have to manually serialized since they aren't castable
+
+        auto serialized_from_vertex = this->vertex_dtype.serialize(from_vertex);
+        std::vector<std::any> from_vertex_anys = {serialized_from_vertex};
         auto from_vertex_vec = maelstrom::make_vector_from_anys(this->structure_storage, this->vertex_dtype, from_vertex_anys);
         
-        std::vector to_vertex_anys = {std::any(to_vertex)};
+        auto serialized_to_vertex = this->vertex_dtype.serialize(to_vertex);
+        std::vector to_vertex_anys = {std::any(serialized_to_vertex)};
         auto to_vertex_vec = maelstrom::make_vector_from_anys(this->structure_storage, this->vertex_dtype, to_vertex_anys);
 
         auto added_edge_vec = this->add_edges(
@@ -160,17 +168,11 @@ namespace bitgraph {
     maelstrom::vector BitGraph::add_edges(maelstrom::vector& from_vertices, maelstrom::vector& to_vertices, std::string label) {
         if(from_vertices.size() != to_vertices.size()) throw std::runtime_error("from vertices size must match to vertices size");
 
-        // matrix has to be COO to update
-        this->matrix->to_coo();
+        // matrix has to be canonical COO to update
+        this->to_canonical_coo();
 
         maelstrom::vector from_vertices_view(from_vertices, true);
         maelstrom::vector to_vertices_view(to_vertices, true);
-
-        maelstrom::vector new_edge_ids = maelstrom::arange(
-            this->structure_storage,
-            maelstrom::safe_any_cast(this->next_edge_id, this->edge_id_dtype),
-            maelstrom::safe_any_cast(this->next_edge_id + from_vertices.size(), this->edge_id_dtype)
-        );
 
         maelstrom::vector new_labels = maelstrom::vector(
             this->structure_storage,
@@ -186,25 +188,19 @@ namespace bitgraph {
             this->matrix->num_rows(),
             to_vertices_view,
             this->matrix->num_cols(),
-            new_edge_ids,
-            new_labels
+            maelstrom::vector(), // no permutation to store in coo
+            std::move(new_labels)
         );
-        new_edge_ids.clear();
-        new_labels.clear();
 
-        // this is the confusing part - have to return "raw" edge ids, not the ones used for lookup
-        // First step is doing a sort
-        auto perm = this->matrix->sort(true);
-        auto filter_ix = maelstrom::filter(perm, maelstrom::GREATER_THAN_OR_EQUAL, old_size);
-        perm = maelstrom::select(perm, filter_ix);
+        // edge_dtype can't represent numbers of edges
+        auto raw_edge_dtype = maelstrom::dtype_from_prim_type(this->edge_dtype.prim_type); 
 
-        auto new_ix = maelstrom::arange(this->traverser_storage, this->matrix->num_nonzero());
-        new_ix = maelstrom::select(new_ix, filter_ix);
-        filter_ix.clear();
-
-        auto sorted_ix = maelstrom::sort(perm);
-        perm.clear();
-        return maelstrom::select(new_ix, sorted_ix).astype(this->edge_dtype);
+        // Can simply return an arange since the matrix is always sorted
+        return maelstrom::arange(
+            this->traverser_storage,
+            maelstrom::safe_any_cast(old_size, raw_edge_dtype),
+            maelstrom::safe_any_cast(old_size + from_vertices.size(), raw_edge_dtype)
+        ).astype(this->edge_dtype);
     }
 
 }

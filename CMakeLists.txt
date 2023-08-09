@@ -13,9 +13,18 @@ set(POSITION_INDEPENDENT_CODE True)
 set(INTERFACE_POSITION_INDEPENDENT_CODE True)
 
 add_library(
-    bitgraph
+    bitgraph SHARED
 
     structure/BitGraph_construct.cpp
+    structure/BitGraph_access.cpp
+    structure/BitGraph_convert.cpp
+    structure/BitGraph_query.cpp
+
+    traversal/BitGraphTraversalSource.cpp
+
+    step/BitGraphVStep.cpp
+    
+    strategy/BitGraphStrategy.cpp
 )
 
 target_compile_options(
@@ -50,8 +59,8 @@ function(AddBitGraphExec EXEC_NAME)
         ${EXEC_NAME}
         PRIVATE
             bitgraph   
-            "../gremlin++/libgremlinxx.a"
-            "../maelstrom/maelstrom.a"
+            "../gremlin++/libgremlinxx.so"
+            "../maelstrom/maelstrom.so"
     )
 
 endfunction()
@@ -68,14 +77,23 @@ function(AddBitGraphTest EXEC_NAME)
             RUNTIME_OUTPUT_DIRECTORY "test/bin"
     )
 
+    target_link_directories(
+       ${EXEC_NAME}
+       PRIVATE
+         "../maelstrom/" 
+         "../gremlin++/"
+    )
+
     target_link_libraries(
         ${EXEC_NAME}
         PRIVATE
-            bitgraph   
-            "../gremlin++/libgremlinxx.a"
-            "../maelstrom/maelstrom.a"
+            bitgraph
+            gremlinxx
+            maelstrom
     )
 
 endfunction()
 
-# todo tests
+AddBitGraphTest(
+    "test_basic.exe" "test/test_basic.cpp"
+)

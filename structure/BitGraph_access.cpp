@@ -16,8 +16,8 @@ namespace bitgraph {
         }
 
         auto& table = p->second;
-        auto found_values = table.get(vertices);
-        auto filter_ix = maelstrom::filter(found_values, maelstrom::NOT_EQUALS, table.key_not_found());
+        auto found_values = table->get(vertices);
+        auto filter_ix = maelstrom::filter(found_values, maelstrom::NOT_EQUALS, table->val_not_found());
 
         if(return_values) {
             return std::make_pair(
@@ -39,15 +39,17 @@ namespace bitgraph {
 
         auto p = this->vertex_properties.find(property_name);
         if(p == this->vertex_properties.end()) {
-            this->vertex_properties[property_name] = maelstrom::hash_table(
-                this->default_property_storage,
-                this->vertex_dtype,
-                property_values.get_dtype(),
-                property_values.size()
+            this->vertex_properties[property_name] = std::unique_ptr<maelstrom::hash_table>(
+                new maelstrom::hash_table(
+                    this->default_property_storage,
+                    this->vertex_dtype,
+                    property_values.get_dtype(),
+                    property_values.size()
+                )
             );
         }
 
-        this->vertex_properties[property_name].set(
+        this->vertex_properties[property_name]->set(
             vertices,
             property_values
         );

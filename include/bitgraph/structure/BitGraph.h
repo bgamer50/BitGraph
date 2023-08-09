@@ -9,6 +9,7 @@
 #include "maelstrom/containers/sparse_matrix.h"
 
 #include "bitgraph/traversal/BitGraphTraversalSource.h"
+#include "bitgraph/step/BitGraphVStep.h"
 
 #include <limits>
 #include <memory>
@@ -25,6 +26,8 @@ namespace bitgraph {
         using Vertex = gremlinxx::Vertex;
         using Edge = gremlinxx::Edge;
 
+        friend bitgraph::BitGraphVStep;
+
         private:
             maelstrom::storage structure_storage;
             maelstrom::storage default_property_storage;
@@ -32,7 +35,6 @@ namespace bitgraph {
 
             maelstrom::dtype_t vertex_dtype;
             maelstrom::dtype_t edge_dtype;
-            maelstrom::dtype_t edge_id_dtype;
 
             size_t next_vertex_id = 0; // will get auto-converted to the vertex_dtype
             size_t next_edge_id = 0; // will get auto-converted to the edge_dtype
@@ -41,7 +43,7 @@ namespace bitgraph {
             std::unique_ptr<maelstrom::sparse_matrix> matrix;
 
             // Element Properties
-            std::unordered_map<std::string, maelstrom::hash_table> vertex_properties;
+            std::unordered_map<std::string, std::unique_ptr<maelstrom::hash_table>> vertex_properties;
             // TODO edge properties
 
             // String index
@@ -54,6 +56,10 @@ namespace bitgraph {
             maelstrom::dtype_t make_vertex_dtype(maelstrom::dtype_t raw_dtype);
             maelstrom::dtype_t make_edge_dtype(maelstrom::dtype_t raw_dtype);
             Vertex vertex_from_id(std::any v_id);
+
+            void to_canonical_csc();
+            void to_canonical_csr();
+            void to_canonical_coo();
 
         public:
             BitGraph(
@@ -104,6 +110,10 @@ namespace bitgraph {
             using gremlinxx::Graph::get_edge_dtype;
 			inline virtual maelstrom::dtype_t get_edge_dtype() { return this->edge_dtype; }
 
+            inline virtual maelstrom::dtype_t get_string_dtype() { return this->string_index.get_dtype(); }
+
+            inline virtual maelstrom::dtype_t get_edge_label_dtype() { return this->edge_label_index.get_dtype(); }
+
 			using gremlinxx::Graph::V;
 			virtual std::pair<maelstrom::vector, maelstrom::vector> V(maelstrom::vector& current_vertices, std::vector<std::string>& labels, gremlinxx::Direction direction);
 
@@ -112,6 +122,12 @@ namespace bitgraph {
 
 			using gremlinxx::Graph::toV;
 			virtual std::pair<maelstrom::vector, maelstrom::vector> toV(maelstrom::vector& current_edges, gremlinxx::Direction direction);
+
+            using gremlinxx::Graph::num_vertices;
+            inline virtual size_t num_vertices() { return this->matrix->num_rows(); }
+
+            using gremlinxx::Graph::num_edges;
+            inline virtual size_t num_edges() { return this->matrix->num_nonzero(); }
     };
 
 }

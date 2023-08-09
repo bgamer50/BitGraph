@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gremlinxx/gremlinxx.h"
+#include <string>
 
 namespace bitgraph {
 
