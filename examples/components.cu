@@ -11,6 +11,7 @@
 #include "gremlinxx/gremlinxx.h"
 #include "gremlinxx/gremlinxx_utils.h"
 #include "maelstrom/containers/vector.h"
+#include "maelstrom/algorithms/arange.h"
 
 #define LABEL_V "basic_vertex"
 #define LABEL_E "basic_edge"
@@ -36,7 +37,7 @@ int main(int argc, char* argv[]) {
 
     char id1[10];
     char id2[10];
-    std::unordered_map<std::string, gremlinxx::Vertex> names;
+    std::unordered_map<std::string, uint32_t> names;
     
     std::vector<uint32_t> source;
     source.reserve(100000);
@@ -59,27 +60,53 @@ int main(int argc, char* argv[]) {
             if(k % 1000 == 0) std::cout << k << std::endl;
             //std::cout << id1 << ", " << id2 << "\n";
 
-            if(0 == names.count(std::string(id1))) {
-                gremlinxx::Vertex v1 = std::any_cast<gremlinxx::Vertex>(
-                    g->addV(LABEL_V).property(NAME, std::string(id1)).next()
-                );
-                names[std::string(id1)] = v1;
+            if(names.end() == names.find(std::string(id1))) {
+                names[std::string(id1)] = names.size();
             }
             
-            if(0 == names.count(std::string(id2))) {
-                gremlinxx::Vertex v2 = std::any_cast<gremlinxx::Vertex>(
-                    g->addV(LABEL_V).property(NAME, std::string(id2)).next()
-                );
-                names[std::string(id2)] = v2;
+            if(names.end() == names.find(std::string(id2))) {
+                names[std::string(id2)] = names.size();
             }
 
-            source.push_back(static_cast<uint32_t>(names[std::string(id1)].id));
-            destination.push_back(static_cast<uint32_t>(names[std::string(id2)].id));
+            source.push_back(
+                names[std::string(id1)]
+            );
+            destination.push_back(
+                names[std::string(id2)]
+            );
         } catch(const std::exception& err) {
             std::cout << err.what() << "\n";
             return -1;
         }
     }
+    std::cout << "File read complete." << std::endl;
+
+    graph.add_vertices(names.size());
+    std::cout << "Vertices added." << std::endl;
+
+    std::vector<std::any> h_values;
+    h_values.reserve(names.size());
+    for(auto p : names) h_values.push_back(p.second);
+
+    maelstrom::vector m_vertices = maelstrom::arange(
+        maelstrom::HOST,
+        static_cast<uint32_t>(names.size())
+    ).astype(graph.get_vertex_dtype());
+
+    maelstrom::vector m_values_view(
+        maelstrom::HOST,
+        graph.get_string_dtype(),
+        h_values.data(),
+        h_values.size(),
+        false
+    );
+
+    graph.set_vertex_properties(
+        NAME,
+        m_vertices,
+        m_values_view
+    );
+    std::cout << "Set vertex properties" << std::endl;
 
     auto source_view = maelstrom::vector(maelstrom::HOST, maelstrom::uint32, source.data(), source.size(), true);
     auto dest_view = maelstrom::vector(maelstrom::HOST, maelstrom::uint32, destination.data(), destination.size(), true);
