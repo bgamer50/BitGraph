@@ -14,6 +14,7 @@ prof.txt
 gprof.txt
 data/facebook.txt
 data/twitter.txt
+data/gplus.txt
 data/cfg_lca.graphml
 data/cfg_lca_nodes.txt
 data/cfg_lca_edges.txt
