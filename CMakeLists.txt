@@ -3,11 +3,15 @@ cmake_minimum_required(VERSION 3.10)
 project(
     BITGRAPH
     VERSION 1.0.0
-    LANGUAGES CXX
+    LANGUAGES CXX CUDA
 )
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CUDA_FLAGS "-forward-unknown-to-host-compiler --expt-relaxed-constexpr --expt-extended-lambda")
+
+# Minimum supported arch is 75
+set(CMAKE_CUDA_ARCHITECTURES "86")
 
 set(POSITION_INDEPENDENT_CODE True)
 set(INTERFACE_POSITION_INDEPENDENT_CODE True)
@@ -55,17 +59,26 @@ function(AddBitGraphExec EXEC_NAME)
             RUNTIME_OUTPUT_DIRECTORY "bin"
     )
 
+    target_link_directories(
+        ${EXEC_NAME}
+        PRIVATE
+          "../maelstrom/" 
+          "../gremlin++/"
+     )
+
     target_link_libraries(
         ${EXEC_NAME}
         PRIVATE
             bitgraph   
-            "../gremlin++/libgremlinxx.so"
-            "../maelstrom/maelstrom.so"
+            gremlinxx
+            maelstrom
     )
 
 endfunction()
 
-# todo execs
+AddBitGraphExec(
+    "components.exe" "examples/components.cu"
+)
 
 function(AddBitGraphTest EXEC_NAME)
     
@@ -75,6 +88,8 @@ function(AddBitGraphTest EXEC_NAME)
         ${EXEC_NAME}
         PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "test/bin"
+            LINK_OPTIONS "-pg"
+            COMPILE_OPTIONS "-g;-pg"
     )
 
     target_link_directories(

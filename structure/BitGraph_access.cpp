@@ -4,7 +4,7 @@
 #include "maelstrom/algorithms/select.h"
 #include "maelstrom/algorithms/arange.h"
 
-#include "maelstrom/util/any_utils.cuh"
+#include "maelstrom/util/any_utils.h"
 
 namespace bitgraph {
 
@@ -15,9 +15,10 @@ namespace bitgraph {
             sx << "Property " << property_name << " does not exist in this graph";
         }
 
-        auto& table = p->second;
+        auto& table = p->second;        
         auto found_values = table->get(vertices);
-        auto filter_ix = maelstrom::filter(found_values, maelstrom::NOT_EQUALS, table->val_not_found());
+        auto found_values_prim_view = maelstrom::as_primitive_vector(found_values, true);
+        auto filter_ix = maelstrom::filter(found_values_prim_view, maelstrom::NOT_EQUALS, table->val_not_found());
 
         if(return_values) {
             return std::make_pair(
@@ -53,6 +54,30 @@ namespace bitgraph {
             vertices,
             property_values
         );
+    }
+
+    void BitGraph::declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size) {
+        if(initial_size == 0) {
+            auto n_vertices = this->num_vertices();
+            initial_size = n_vertices > 0 ? n_vertices : 62;
+        }
+
+        auto p = this->vertex_properties.find(property_name);
+        if(p == this->vertex_properties.end()) {
+            this->vertex_properties[property_name] = std::unique_ptr<maelstrom::hash_table>(
+                new maelstrom::hash_table(
+                    this->default_property_storage,
+                    this->vertex_dtype,
+                    dtype,
+                    initial_size
+                )
+            );
+        } else {
+            std::stringstream sx;
+            sx << "Cannot declare vertex property " << property_name;
+            sx << " because it already exists!";
+            throw std::runtime_error(sx.str());
+        }
     }
 
     std::vector<std::string> BitGraph::get_vertex_property_names() {

@@ -1,6 +1,7 @@
 #include "gremlinxx/gremlinxx.h"
 #include "bitgraph/structure/BitGraph.h"
 #include "maelstrom/containers/vector.h"
+#include "maelstrom/util/any_utils.h"
 
 #include <iostream>
 #include <fstream>
@@ -83,10 +84,10 @@ int main(int argc, char* argv[]) {
     assert( std::any_cast<size_t>(g->V().values("bleh").count().next()) == 2 );
 
     std::cout << "testing basic adjacency querying" << std::endl;
-    std::vector<uint32_t> ids;
+    std::vector<size_t> ids;
     g->V(0).out().id().forEachRemaining([&ids](std::any& id){
-        std::cout << std::any_cast<uint32_t>(id) << " ";
-        ids.push_back(std::any_cast<uint32_t>(id));
+        std::cout << std::any_cast<size_t>(id) << " ";
+        ids.push_back(std::any_cast<size_t>(id));
     });
     std::cout << std::endl;
 
@@ -98,8 +99,30 @@ int main(int argc, char* argv[]) {
 
     std::cout << "testing reductions" << std::endl;
     assert(
-        std::any_cast<uint32_t>(g->V(0).out().id().min().next()) == 1
+        std::any_cast<size_t>(g->V(0).out().id().min().next()) == 1
     );
+
+    std::cout << "testing property setting" << std::endl;
+    g->V(5).property("zip", 21045).iterate();
+    assert(
+        std::any_cast<int>(g->V(5).values("zip").next()) == 21045
+    );
+
+    std::cout << "testing multi property setting" << std::endl;
+    g->V(6).property("zip", 20723).iterate();
+    auto props = maelstrom::any_vec_to_vec<int>(
+        g->V().values("zip").toVector()
+    );
+    assert( props[0] == 21045 );
+    assert( props[1] == 20723 );
+
+    std::cout << "test changing a property value" << std::endl;
+    g->V(6).property("zip", 20147).iterate();
+    props = maelstrom::any_vec_to_vec<int>(
+        g->V().values("zip").toVector()
+    );
+    assert( props[0] == 21045 );
+    assert( props[1] == 20147 );
 
     std::cout << "DONE!" << std::endl;
 }

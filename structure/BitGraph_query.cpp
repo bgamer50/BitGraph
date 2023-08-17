@@ -1,7 +1,7 @@
 #include "bitgraph/structure/BitGraph.h"
 
 #include "maelstrom/algorithms/arange.h"
-#include "maelstrom/util/any_utils.cuh"
+#include "maelstrom/util/any_utils.h"
 
 namespace bitgraph {
 

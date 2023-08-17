@@ -1,6 +1,6 @@
 #include "bitgraph/structure/BitGraph.h"
 
-#include "maelstrom/util/any_utils.cuh"
+#include "maelstrom/util/any_utils.h"
 #include "maelstrom/algorithms/arange.h"
 #include "maelstrom/algorithms/set.h"
 #include "maelstrom/algorithms/select.h"
@@ -109,14 +109,12 @@ namespace bitgraph {
 
         // update matrix
         size_t total_num_vertices = this->matrix->num_rows() + n_new_vertices;
-        std::cout << "setting..." << std::endl;
         this->matrix->set(
             maelstrom::vector(),
             total_num_vertices,
             maelstrom::vector(),
             total_num_vertices
         );
-        std::cout << "done steting" << std::endl;
 
         // labels
         auto string_dtype = this->string_index.get_dtype();

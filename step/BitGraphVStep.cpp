@@ -5,9 +5,11 @@
 #include "maelstrom/algorithms/set.h"
 #include "maelstrom/algorithms/increment.h"
 
-#include "maelstrom/util/any_utils.cuh"
+#include "maelstrom/util/any_utils.h"
 
 namespace bitgraph {
+    bool BITGRAPH_VALIDITY_WARNING = false;
+
     BitGraphVStep::BitGraphVStep(std::vector<std::any> element_ids)
     : gremlinxx::TraversalStep(gremlinxx::MAP, BITGRAPH_V_STEP) {
         this->element_ids = element_ids;
@@ -23,7 +25,10 @@ namespace bitgraph {
             query_vertices = maelstrom::make_vector_from_anys(graph->traverser_storage, this->element_ids).astype(graph->vertex_dtype);
             
             // TODO properly check if vertices are valid.
-            std::cerr << "warning: BitGraph currently does not check vertex validity" << std::endl;
+            if(!BITGRAPH_VALIDITY_WARNING) {
+                std::cerr << "warning: BitGraph currently does not check vertex validity" << std::endl;
+                BITGRAPH_VALIDITY_WARNING = true;
+            }
         } else {
             query_vertices = maelstrom::arange(
                 traverser_storage,

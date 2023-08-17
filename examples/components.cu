@@ -1,4 +1,5 @@
 #include <vector>
+#include <any>
 #include <string>
 #include <chrono>
 #include <ctime>
@@ -6,29 +7,27 @@
 
 #include <cuda_profiler_api.h>
 
-#include "traversal/GraphTraversal.h"
-#include "traversal/Comparison.h"
-#include "structure/Graph.h"
-#include "structure/CPUGraph.h"
-#include "structure/GPUGraph.cuh"
-#include "util/gremlin_utils.h"
-#include "algorithm/ConnectedComponentsGPUGraphAlgorithm.cuh"
+#include "bitgraph/structure/BitGraph.h"
+#include "gremlinxx/gremlinxx.h"
+#include "gremlinxx/gremlinxx_utils.h"
+#include "maelstrom/containers/vector.h"
 
 #define LABEL_V "basic_vertex"
 #define LABEL_E "basic_edge"
 #define NAME "name"
 
 int main(int argc, char* argv[]) {
-    CPUGraph graph;
-    graph.create_index(VERTEX_INDEX, NAME, [](boost::any& a) { 
-            std::hash<std::string> hf;
-            return hf(boost::any_cast<std::string>(a));
-        }, [](boost::any& a, boost::any& b) {
-            std::string c = boost::any_cast<std::string>(a);
-            std::string d = boost::any_cast<std::string>(b);
-            return c == d;
-        });
-    GraphTraversalSource* g = graph.traversal();
+    cudaSetDevice(0);
+
+    bitgraph::BitGraph graph(
+        maelstrom::uint32, // vertex dtype
+        maelstrom::uint32, // edge dtype
+        maelstrom::DEVICE, // structure storage
+        maelstrom::MANAGED, // default property storage
+        maelstrom::DEVICE // traverser_storage
+    );
+    auto g = graph.traversal();
+    //g->withAdminOption("debug", "True");
 
     std::string filename = argv[1];
     std::string processor = argv[2];
@@ -37,59 +36,76 @@ int main(int argc, char* argv[]) {
 
     char id1[10];
     char id2[10];
-    std::unordered_set<std::string> names;
+    std::unordered_map<std::string, gremlinxx::Vertex> names;
+    
+    std::vector<uint32_t> source;
+    source.reserve(100000);
+    std::vector<uint32_t> destination;
+    destination.reserve(100000);
+
+    graph.declare_vertex_property(
+        NAME,
+        maelstrom::DEVICE,
+        graph.get_string_dtype(),
+        100000
+    );
+
     int k = 0;
     auto start = std::chrono::system_clock::now();
+    double add_edge_time = 0.0;
     while(2 == fscanf(f, "%s %s\n", id1, id2)) {
-        ++k;
-        if(k % 1000 == 0) std::cout << k << std::endl;
-        //std::cout << id1 << ", " << id2 << "\n";
-        Vertex* v1;
-        Vertex* v2;
-
-        if(0 == names.count(std::string(id1))) v1 = boost::any_cast<Vertex*>(g->addV(LABEL_V)->property(NAME, std::string(id1))->next());
-        else v1 = boost::any_cast<Vertex*>(g->V()->has(NAME, std::string(id1))->next());
-        
-        names.insert(std::string(id1));
-        //std::cout << boost::any_cast<uint64_t>(v1->id()) << " " << boost::any_cast<std::string>(v1->property(NAME)->value()) << "\n";
-        
-        if(0 == names.count(std::string(id2))) v2 = boost::any_cast<Vertex*>(g->addV(LABEL_V)->property(NAME, std::string(id2))->next());
-        else v2 = boost::any_cast<Vertex*>(g->V()->has(NAME, std::string(id2))->next());
-
-        names.insert(std::string(id2));
-        //std::cout << boost::any_cast<uint64_t>(v2->id()) << " " << boost::any_cast<std::string>(v2->property(NAME)->value()) << "\n";
-
-        //std::cout << boost::any_cast<uint64_t>(v1->id()) << " - - " << boost::any_cast<uint64_t>(v2->id()) << "\n";
-        
         try {
-            g->V(v1)->addE(LABEL_E)->to(v2)->iterate();
+            ++k;
+            if(k % 1000 == 0) std::cout << k << std::endl;
+            //std::cout << id1 << ", " << id2 << "\n";
+
+            if(0 == names.count(std::string(id1))) {
+                gremlinxx::Vertex v1 = std::any_cast<gremlinxx::Vertex>(
+                    g->addV(LABEL_V).property(NAME, std::string(id1)).next()
+                );
+                names[std::string(id1)] = v1;
+            }
+            
+            if(0 == names.count(std::string(id2))) {
+                gremlinxx::Vertex v2 = std::any_cast<gremlinxx::Vertex>(
+                    g->addV(LABEL_V).property(NAME, std::string(id2)).next()
+                );
+                names[std::string(id2)] = v2;
+            }
+
+            source.push_back(static_cast<uint32_t>(names[std::string(id1)].id));
+            destination.push_back(static_cast<uint32_t>(names[std::string(id2)].id));
         } catch(const std::exception& err) {
             std::cout << err.what() << "\n";
             return -1;
         }
     }
 
-    std::cout << "creating gpu graph!" << std::endl;
-    cudaSetDevice(0);
-    GPUGraph gpu_graph(graph);
-    std::cout << "gpu graph created!" << std::endl;
-    auto h = processor == "gpu" ? gpu_graph.traversal() : g;
+    auto source_view = maelstrom::vector(maelstrom::HOST, maelstrom::uint32, source.data(), source.size(), true);
+    auto dest_view = maelstrom::vector(maelstrom::HOST, maelstrom::uint32, destination.data(), destination.size(), true);
+    graph.add_edges(
+        source_view,
+        dest_view,
+        LABEL_E
+    );
 
     auto end = std::chrono::system_clock::now();
 
     std::chrono::duration<double> elapsed = end-start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
+    std::cout << add_edge_time << std::endl;
+    //return;
 
-    gpu_graph.declare_property(
+    graph.declare_vertex_property(
         "cc",
-        gremlinxx::comparison::C::UINT64,
-        gpu_graph.num_vertices()
+        maelstrom::DEVICE,
+        maelstrom::uint64
     );
 
-    gpu_graph.declare_property(
+    graph.declare_vertex_property(
         "old_cc",
-        gremlinxx::comparison::C::UINT64,
-        gpu_graph.num_vertices()
+        maelstrom::DEVICE,
+        maelstrom::uint64
     );
 
     for(size_t r = 0; r < tries; ++r) {
@@ -97,8 +113,11 @@ int main(int argc, char* argv[]) {
             cudaProfilerStart();
             start = std::chrono::system_clock::now();
 
-            h->V()->property("cc", id())->iterate();
-            h->V()->property("old_cc", values("cc"))->iterate();
+            using gremlinxx::id;
+            using gremlinxx::values;
+            g->V().property("cc", id()).iterate();
+            g->V().property("old_cc", values("cc")).iterate();
+            std::cout << "set cc and old cc" << std::endl;
 
             //gpu_graph.get_property("cc", 13, true);
             //gpu_graph.get_property("old_cc", 13, true);
@@ -106,16 +125,18 @@ int main(int argc, char* argv[]) {
             
             size_t diff = 1;
             while(diff > 0) {
-                diff = boost::any_cast<size_t>(
-                    h->V()
-                    ->property("old_cc", values("cc"))
-                    ->property("cc", 
-                        _union({both()->values("old_cc"), values("old_cc")})->min<uint64_t>()
+                using gremlinxx::_union;
+                using gremlinxx::both;
+                diff = std::any_cast<size_t>(
+                    g->V()
+                    .property("old_cc", values("cc"))
+                    .property("cc", 
+                        _union({both().values("old_cc"), values("old_cc")}).min()
                     )
-                    ->valueMap({"cc","old_cc"})->by(unfold())
-                    ->where("cc", P::neq("old_cc"))
-                    ->count()
-                    ->next()
+                    .elementMap({"cc", "old_cc"})
+                    .where("cc", gremlinxx::P::neq("old_cc"))
+                    .count()
+                    .next()
                 );
                 std::cout << "diff: " << diff << std::endl;
             }
@@ -124,23 +145,12 @@ int main(int argc, char* argv[]) {
             elapsed = end-start;
             std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
             std::unordered_set<int> comp_set;
-            h->V()->values("cc")->forEachRemaining([g,&comp_set](boost::any& v) {
-                int id = boost::any_cast<uint64_t>(v);
+            g->V().values("cc").forEachRemaining([g,&comp_set](std::any& v) {
+                int id = std::any_cast<uint64_t>(v);
                 comp_set.insert(id);
                 //std::cout << id << std::endl;
             });
             std::cout << comp_set.size() << " components!" << std::endl;
-
-            if(processor == "gpu") {
-                start = std::chrono::system_clock::now();
-                auto* algo = (new ConnectedComponentsGPUGraphAlgorithm())->option(ConnectedComponentsGPUGraphAlgorithm::OPTION_DIRECTION, BOTH);
-                auto algo_result = gpu_graph.algorithm(algo);
-                end = std::chrono::system_clock::now();
-                elapsed = end - start;
-                std::cerr << "CCalgo time: " << elapsed.count() << " seconds." << std::endl;
-                std::cout << boost::any_cast<std::unordered_map<std::string, std::vector<uint64_t>>>(algo_result[ConnectedComponentsGPUGraphAlgorithm::OUTPUT_COMPONENTS]).size() << " components." << std::endl;
-                delete algo;
-            }
 
         } catch(const std::exception& err) {
             std::cout << err.what() << std::endl;

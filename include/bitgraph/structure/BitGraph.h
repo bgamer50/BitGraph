@@ -95,6 +95,8 @@ namespace bitgraph {
             using gremlinxx::Graph::set_vertex_properties;
             virtual void set_vertex_properties(std::string property_name, maelstrom::vector& vertices, maelstrom::vector& property_values);
 
+            virtual void declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
+
             using gremlinxx::Graph::get_vertex_properties;
             virtual std::pair<maelstrom::vector, maelstrom::vector> get_vertex_properties(std::string property_name, maelstrom::vector& vertices, bool return_values=true);
 
