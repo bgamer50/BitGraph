@@ -30,30 +30,27 @@ int main(int argc, char* argv[]) {
     auto g = graph.traversal();
     //g->withAdminOption("debug", "True");
 
+    // FIXME hide all of this behind a reader so the user doesn't have to
+    // worry about BitGraph implementation details
     std::string filename = argv[1];
     std::string processor = argv[2];
     size_t tries = std::atol(argv[3]);
     FILE* f = fopen(filename.c_str(), "r");
 
-    char id1[10];
-    char id2[10];
+    char id1[100];
+    char id2[100];
     std::unordered_map<std::string, uint32_t> names;
     
-    std::vector<uint32_t> source;
-    source.reserve(100000);
-    std::vector<uint32_t> destination;
-    destination.reserve(100000);
+    size_t expected_num_edges = (argc >= 5) ? std::atol(argv[4]) : static_cast<size_t>(1E6);
+    std::cout << "Allocating storage for " << expected_num_edges << " edges" << std::endl;
 
-    graph.declare_vertex_property(
-        NAME,
-        maelstrom::DEVICE,
-        graph.get_string_dtype(),
-        100000
-    );
+    std::vector<uint32_t> source;
+    source.reserve(expected_num_edges);
+    std::vector<uint32_t> destination;
+    destination.reserve(expected_num_edges);
 
     int k = 0;
     auto start = std::chrono::system_clock::now();
-    double add_edge_time = 0.0;
     while(2 == fscanf(f, "%s %s\n", id1, id2)) {
         try {
             ++k;
@@ -80,31 +77,45 @@ int main(int argc, char* argv[]) {
         }
     }
     std::cout << "File read complete." << std::endl;
+    fclose(f);
 
     graph.add_vertices(names.size());
     std::cout << "Vertices added." << std::endl;
 
+    std::vector<uint32_t> h_vertices;
+    h_vertices.reserve(names.size());
     std::vector<std::any> h_values;
     h_values.reserve(names.size());
-    for(auto p : names) h_values.push_back(p.second);
+    for(auto p : names) {
+        h_values.push_back(graph.get_string_dtype().serialize(p.first));
+        h_vertices.push_back(p.second);
+    }
 
-    maelstrom::vector m_vertices = maelstrom::arange(
+    maelstrom::vector m_vertices(
         maelstrom::HOST,
-        static_cast<uint32_t>(names.size())
-    ).astype(graph.get_vertex_dtype());
+        graph.get_vertex_dtype(),
+        h_vertices.data(),
+        h_vertices.size(),
+        false
+    );
 
-    maelstrom::vector m_values_view(
+    auto m_values = maelstrom::make_vector_from_anys(
         maelstrom::HOST,
         graph.get_string_dtype(),
-        h_values.data(),
-        h_values.size(),
-        false
+        h_values
+    );
+
+    graph.declare_vertex_property(
+        NAME,
+        maelstrom::DEVICE,
+        graph.get_string_dtype(),
+        graph.num_vertices()
     );
 
     graph.set_vertex_properties(
         NAME,
         m_vertices,
-        m_values_view
+        m_values
     );
     std::cout << "Set vertex properties" << std::endl;
 
@@ -118,10 +129,8 @@ int main(int argc, char* argv[]) {
 
     auto end = std::chrono::system_clock::now();
 
-    std::chrono::duration<double> elapsed = end-start;
+    std::chrono::duration<double> elapsed = end - start;
     std::cerr << "Ingest time: " << elapsed.count() << " seconds." << std::endl;
-    std::cout << add_edge_time << std::endl;
-    //return;
 
     graph.declare_vertex_property(
         "cc",
@@ -135,9 +144,10 @@ int main(int argc, char* argv[]) {
         maelstrom::uint64
     );
 
+    //g->withAdminOption("debug", "True");
     for(size_t r = 0; r < tries; ++r) {
         try {
-            cudaProfilerStart();
+            //cudaProfilerStart();
             start = std::chrono::system_clock::now();
 
             using gremlinxx::id;
@@ -168,22 +178,18 @@ int main(int argc, char* argv[]) {
                 std::cout << "diff: " << diff << std::endl;
             }
             end = std::chrono::system_clock::now();
-            cudaProfilerStop();
+            //cudaProfilerStop();
             elapsed = end-start;
             std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
-            std::unordered_set<int> comp_set;
-            g->V().values("cc").forEachRemaining([g,&comp_set](std::any& v) {
-                int id = std::any_cast<uint64_t>(v);
-                comp_set.insert(id);
-                //std::cout << id << std::endl;
-            });
-            std::cout << comp_set.size() << " components!" << std::endl;
+
+            size_t n_components = std::any_cast<size_t>(g->V().values("cc").dedup().count().next());
+            std::cout << n_components << " components!" << std::endl;
 
         } catch(const std::exception& err) {
-            std::cout << err.what() << std::endl;
+            std::cout << "An error occurred: " << err.what() << std::endl;
             return -1;
         }
     }
 
-    fclose(f);
+    return EXIT_SUCCESS;
 }

@@ -88,8 +88,8 @@ function(AddBitGraphTest EXEC_NAME)
         ${EXEC_NAME}
         PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "test/bin"
-            LINK_OPTIONS "-pg"
-            COMPILE_OPTIONS "-g;-pg"
+            LINK_OPTIONS "-g"
+            COMPILE_OPTIONS "-g"
     )
 
     target_link_directories(
