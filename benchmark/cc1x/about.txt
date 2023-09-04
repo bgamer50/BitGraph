@@ -1,2 +1,0 @@
-Benchmarking code for connected components (cc1x) on JanusGraph, Neo4j, and TinkerGraph.
-
