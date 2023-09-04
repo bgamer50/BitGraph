@@ -12,13 +12,12 @@ test/test.*
 *.xml
 prof.txt
 gprof.txt
+data/friendster.txt
+data/livejournal.txt
 data/facebook.txt
 data/twitter.txt
 data/gplus.txt
-data/cfg_lca.graphml
-data/cfg_lca_nodes.txt
-data/cfg_lca_edges.txt
-data/cfg_lca.clangcppcfg
+data/temporal
 CMakeFiles/
 CMakeCache.txt
 *.cmake
