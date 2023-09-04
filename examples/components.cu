@@ -147,7 +147,6 @@ int main(int argc, char* argv[]) {
     //g->withAdminOption("debug", "True");
     for(size_t r = 0; r < tries; ++r) {
         try {
-            //cudaProfilerStart();
             start = std::chrono::system_clock::now();
 
             using gremlinxx::id;
@@ -178,7 +177,6 @@ int main(int argc, char* argv[]) {
                 std::cout << "diff: " << diff << std::endl;
             }
             end = std::chrono::system_clock::now();
-            //cudaProfilerStop();
             elapsed = end-start;
             std::cerr << "CCxx time: " << elapsed.count() << " seconds." << std::endl;
 

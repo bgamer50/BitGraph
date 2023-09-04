@@ -12,7 +12,7 @@ namespace bitgraph {
         auto p = this->vertex_properties.find(property_name);
         if(p == this->vertex_properties.end()) {
             std::stringstream sx;
-            sx << "Property " << property_name << " does not exist in this graph";
+            sx << "Vertex Property " << property_name << " does not exist in this graph";
         }
 
         auto& table = p->second;        
@@ -33,9 +33,34 @@ namespace bitgraph {
         );
     }
 
+    std::pair<maelstrom::vector, maelstrom::vector> BitGraph::get_edge_properties(std::string property_name, maelstrom::vector& edges, bool return_values) {
+        auto p = this->edge_properties.find(property_name);
+        if(p == this->edge_properties.end()) {
+            std::stringstream sx;
+            sx << "Edge Property " << property_name << " does not exist in this graph";
+        }
+
+        auto& table = p->second;        
+        auto found_values = table->get(edges);
+        auto found_values_prim_view = maelstrom::as_primitive_vector(found_values, true);
+        auto filter_ix = maelstrom::filter(found_values_prim_view, maelstrom::NOT_EQUALS, table->val_not_found());
+
+        if(return_values) {
+            return std::make_pair(
+                std::move(maelstrom::select(found_values, filter_ix)),
+                std::move(filter_ix)
+            );
+        }
+
+        return std::make_pair(
+            maelstrom::vector(),
+            std::move(filter_ix)
+        );
+    }
+
     void BitGraph::set_vertex_properties(std::string property_name, maelstrom::vector& vertices, maelstrom::vector& property_values) {
         if(vertices.get_dtype() != this->vertex_dtype) {
-            throw std::runtime_error("Vertex array did not have property datatype!");
+            throw std::runtime_error("Vertex array did not have proper datatype!");
         }
 
         auto p = this->vertex_properties.find(property_name);
@@ -52,6 +77,29 @@ namespace bitgraph {
 
         this->vertex_properties[property_name]->set(
             vertices,
+            property_values
+        );
+    }
+
+    void BitGraph::set_edge_properties(std::string property_name, maelstrom::vector& edges, maelstrom::vector& property_values) {
+        if(edges.get_dtype() != this->edge_dtype) {
+            throw std::runtime_error("Edge array did not have proper datatype!");
+        }
+
+        auto p = this->edge_properties.find(property_name);
+        if(p == this->edge_properties.end()) {
+            this->edge_properties[property_name] = std::unique_ptr<maelstrom::hash_table>(
+                new maelstrom::hash_table(
+                    this->default_property_storage,
+                    this->edge_dtype,
+                    property_values.get_dtype(),
+                    property_values.size()
+                )
+            );
+        }
+
+        this->edge_properties[property_name]->set(
+            edges,
             property_values
         );
     }
@@ -80,10 +128,41 @@ namespace bitgraph {
         }
     }
 
+    void BitGraph::declare_edge_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size) {
+        if(initial_size == 0) {
+            auto n_edges = this->num_edges();
+            initial_size = n_edges > 0 ? n_edges : 62;
+        }
+
+        auto p = this->edge_properties.find(property_name);
+        if(p == this->edge_properties.end()) {
+            this->edge_properties[property_name] = std::unique_ptr<maelstrom::hash_table>(
+                new maelstrom::hash_table(
+                    this->default_property_storage,
+                    this->edge_dtype,
+                    dtype,
+                    initial_size
+                )
+            );
+        } else {
+            std::stringstream sx;
+            sx << "Cannot declare edge property " << property_name;
+            sx << " because it already exists!";
+            throw std::runtime_error(sx.str());
+        }
+    }
+
     std::vector<std::string> BitGraph::get_vertex_property_names() {
         std::vector<std::string> names;
         names.reserve(this->vertex_properties.size());
         for(auto& p : this->vertex_properties) names.push_back(p.first);
+        return names;
+    }
+
+    std::vector<std::string> BitGraph::get_edge_property_names() {
+        std::vector<std::string> names;
+        names.reserve(this->edge_properties.size());
+        for(auto& p : this->edge_properties) names.push_back(p.first);
         return names;
     }
 
@@ -92,6 +171,11 @@ namespace bitgraph {
             this->vertex_labels,
             vertices
         );
+    }
+
+    maelstrom::vector BitGraph::get_edge_labels(maelstrom::vector& edges) {
+        this->to_canonical_coo();
+        return this->matrix->get_relations_1d(edges);
     }
 
     /**

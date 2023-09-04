@@ -44,7 +44,7 @@ namespace bitgraph {
 
             // Element Properties
             std::unordered_map<std::string, std::unique_ptr<maelstrom::hash_table>> vertex_properties;
-            // TODO edge properties
+            std::unordered_map<std::string, std::unique_ptr<maelstrom::hash_table>> edge_properties;
 
             // String index
             maelstrom::string_index<uint64_t> string_index{BITGRAPH_INVALID_STRING, std::numeric_limits<uint64_t>::max()};
@@ -95,16 +95,30 @@ namespace bitgraph {
             using gremlinxx::Graph::set_vertex_properties;
             virtual void set_vertex_properties(std::string property_name, maelstrom::vector& vertices, maelstrom::vector& property_values);
 
+            using gremlinxx::Graph::set_edge_properties;
+            virtual void set_edge_properties(std::string property_name, maelstrom::vector& edges, maelstrom::vector& property_values);
+
             virtual void declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
+
+            virtual void declare_edge_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
 
             using gremlinxx::Graph::get_vertex_properties;
             virtual std::pair<maelstrom::vector, maelstrom::vector> get_vertex_properties(std::string property_name, maelstrom::vector& vertices, bool return_values=true);
 
+            using gremlinxx::Graph::get_edge_properties;
+            virtual std::pair<maelstrom::vector, maelstrom::vector> get_edge_properties(std::string property_name, maelstrom::vector& edges, bool return_values=true);
+
             using gremlinxx::Graph::get_vertex_property_names;
             virtual std::vector<std::string> get_vertex_property_names();
 
+            using gremlinxx::Graph::get_edge_property_names;
+            virtual std::vector<std::string> get_edge_property_names();
+
             using gremlinxx::Graph::get_vertex_labels;
             virtual maelstrom::vector get_vertex_labels(maelstrom::vector& vertices);
+
+            using gremlinxx::Graph::get_edge_labels;
+            virtual maelstrom::vector get_edge_labels(maelstrom::vector& edges);
 
             using gremlinxx::Graph::get_vertex_dtype;
             inline virtual maelstrom::dtype_t get_vertex_dtype() { return this->vertex_dtype; }
