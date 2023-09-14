@@ -13,9 +13,18 @@ namespace bitgraph {
         if(p == this->vertex_properties.end()) {
             std::stringstream sx;
             sx << "Vertex Property " << property_name << " does not exist in this graph";
+            throw std::invalid_argument(sx.str());
         }
 
         auto& table = p->second;        
+
+        if(vertices.empty()) {
+            return std::make_pair(
+                maelstrom::vector(vertices.get_mem_type(), table->get_val_dtype()),
+                maelstrom::vector(vertices.get_mem_type(), maelstrom::uint64)
+            );
+        }
+
         auto found_values = table->get(vertices);
         auto found_values_prim_view = maelstrom::as_primitive_vector(found_values, true);
         auto filter_ix = maelstrom::filter(found_values_prim_view, maelstrom::NOT_EQUALS, table->val_not_found());
@@ -38,9 +47,18 @@ namespace bitgraph {
         if(p == this->edge_properties.end()) {
             std::stringstream sx;
             sx << "Edge Property " << property_name << " does not exist in this graph";
+            throw std::invalid_argument(sx.str());
         }
 
         auto& table = p->second;        
+
+        if(edges.empty()) {
+            return std::make_pair(
+                maelstrom::vector(edges.get_mem_type(), table->get_val_dtype()),
+                maelstrom::vector(edges.get_mem_type(), maelstrom::uint64)
+            );
+        }
+
         auto found_values = table->get(edges);
         auto found_values_prim_view = maelstrom::as_primitive_vector(found_values, true);
         auto filter_ix = maelstrom::filter(found_values_prim_view, maelstrom::NOT_EQUALS, table->val_not_found());

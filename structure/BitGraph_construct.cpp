@@ -165,6 +165,7 @@ namespace bitgraph {
 
     maelstrom::vector BitGraph::add_edges(maelstrom::vector& from_vertices, maelstrom::vector& to_vertices, std::string label) {
         if(from_vertices.size() != to_vertices.size()) throw std::runtime_error("from vertices size must match to vertices size");
+        if(from_vertices.size() == 0) return maelstrom::vector(this->traverser_storage, this->edge_dtype);
 
         // matrix has to be canonical COO to update
         this->to_canonical_coo();

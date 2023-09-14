@@ -154,10 +154,6 @@ int main(int argc, char* argv[]) {
             g->V().property("cc", id()).iterate();
             g->V().property("old_cc", values("cc")).iterate();
             std::cout << "set cc and old cc" << std::endl;
-
-            //gpu_graph.get_property("cc", 13, true);
-            //gpu_graph.get_property("old_cc", 13, true);
-            //std::cout << "successfully got #13" << std::endl;
             
             size_t diff = 1;
             while(diff > 0) {

@@ -1,6 +1,7 @@
 #include "bitgraph/traversal/BitGraphTraversalSource.h"
 #include "bitgraph/structure/BitGraph.h"
 #include "bitgraph/strategy/BitGraphStrategy.h"
+#include "gremlinxx/gremlinxx.h"
 
 namespace bitgraph {
 
@@ -11,5 +12,6 @@ namespace bitgraph {
         );
 
         this->withStrategy(bitgraph::bitgraph_strategy);
+        this->withStrategy(gremlinxx::limit_supporting_strategy);
     }
 }

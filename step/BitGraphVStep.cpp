@@ -21,7 +21,12 @@ namespace bitgraph {
 
         maelstrom::vector query_vertices;
 
-        if(!this->element_ids.empty()) {
+        if(this->element_ids.empty()) {
+            query_vertices = maelstrom::arange(
+                traverser_storage,
+                this->limit ? std::min(graph->num_vertices(), *(this->limit)) : graph->num_vertices()
+            ).astype(graph->vertex_dtype);
+        } else {
             query_vertices = maelstrom::make_vector_from_anys(graph->traverser_storage, this->element_ids).astype(graph->vertex_dtype);
             
             // TODO properly check if vertices are valid.
@@ -29,11 +34,6 @@ namespace bitgraph {
                 std::cerr << "warning: BitGraph currently does not check vertex validity" << std::endl;
                 BITGRAPH_VALIDITY_WARNING = true;
             }
-        } else {
-            query_vertices = maelstrom::arange(
-                traverser_storage,
-                graph->num_vertices()
-            ).astype(graph->vertex_dtype);
         }
 
         size_t num_traversers = traversers.size();

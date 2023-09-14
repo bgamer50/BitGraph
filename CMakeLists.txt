@@ -6,7 +6,7 @@ project(
     LANGUAGES CXX CUDA
 )
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CUDA_FLAGS "-forward-unknown-to-host-compiler --expt-relaxed-constexpr --expt-extended-lambda")
 
@@ -80,6 +80,14 @@ AddBitGraphExec(
     "components.exe" "examples/components.cu"
 )
 
+AddBitGraphExec(
+    "edge_query.exe" "examples/edge_query.cu"
+)
+
+AddBitGraphExec(
+    "shortest_path.exe" "examples/shortest_path.cu"
+)
+
 function(AddBitGraphTest EXEC_NAME)
     
     add_executable(${EXEC_NAME} ${ARGN})
@@ -88,8 +96,6 @@ function(AddBitGraphTest EXEC_NAME)
         ${EXEC_NAME}
         PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "test/bin"
-            LINK_OPTIONS "-g"
-            COMPILE_OPTIONS "-g"
     )
 
     target_link_directories(
