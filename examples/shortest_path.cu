@@ -329,6 +329,9 @@ int main(int argc, char* argv[]) {
                   .hasNot("visited")
                   .property("visited", 1)
             ).emit(identity()).count().next();
+            // From the start airport, how many airports can we visit within 4 days,
+            // assuming that after each stop, there is 1 day of processing,
+            // so the next flight must occur on the next day.
 
             std::cout << "count: " << std::any_cast<size_t>(result) << std::endl;
             //std::cout << "result id: " << std::any_cast<gremlinxx::Vertex>(result).id << std::endl;
