@@ -334,7 +334,6 @@ int main(int argc, char* argv[]) {
             // so the next flight must occur on the next day.
 
             std::cout << "count: " << std::any_cast<size_t>(result) << std::endl;
-            //std::cout << "result id: " << std::any_cast<gremlinxx::Vertex>(result).id << std::endl;
 
             end = std::chrono::system_clock::now();
             elapsed = end-start;
