@@ -124,6 +124,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "File read complete." << std::endl;
+    std::cout << "read " << names.size() << " vertices" << std::endl;
     f_nodes.close();
 
     graph.add_vertices(names.size());
@@ -193,7 +194,7 @@ int main(int argc, char* argv[]) {
         std::chrono::month(1),
         std::chrono::day(1)
     };
-    std::vector<uint32_t> times; // days since start (1/1/2019)
+    std::vector<int32_t> times; // days since start (1/1/2019)
     times.reserve(expected_num_edges);
 
     std::vector<std::any> flight_numbers;
@@ -203,18 +204,20 @@ int main(int argc, char* argv[]) {
     planes.reserve(expected_num_edges);
 
     std::getline(f_edges, line, '\n'); line.clear(); // skip header
-    size_t e_id;
-    while(!f_edges.eof()) {
+    size_t e_id = 0;
+    size_t k = 0;
+    while(!f_edges.eof() && k < 1e6) {
+        ++k;
         std::getline(f_edges, line, '\n');
 
         std::string entry;
         std::vector<std::string> entries;
-        entries.reserve(4);
+        entries.reserve(5);
 
         std::stringstream sx(line);
         while(std::getline(sx, entry, ',')) entries.push_back(std::string(entry));
 
-        if(entries.size() == 5) {
+        if(entries.size() >= 3) {
             uint32_t src = names[entries[1]];
             uint32_t dst = names[entries[2]];
             edge_info.push_back(std::make_pair(src, dst));
@@ -239,18 +242,22 @@ int main(int argc, char* argv[]) {
             auto time_diff = std::chrono::sys_days{ymd} - std::chrono::sys_days{start_ymd};
 
             times.push_back(
-                static_cast<uint32_t>(
+                static_cast<int32_t>(
                     time_diff.count()
                 )
             );
             
-            flight_numbers.push_back(
-                graph.get_string_dtype().serialize(entries[3])
-            );
+            if(entries.size() >= 4) {
+                flight_numbers.push_back(
+                    graph.get_string_dtype().serialize(entries[3])
+                );
+            }
 
-            planes.push_back(
-                graph.get_string_dtype().serialize(entries[4])
-            );
+            if(entries.size() >= 5) {
+                planes.push_back(
+                    graph.get_string_dtype().serialize(entries[4])
+                );
+            }
         }
     }    
 
@@ -267,9 +274,9 @@ int main(int argc, char* argv[]) {
 
     auto erange = maelstrom::arange(maelstrom::DEVICE, static_cast<size_t>(graph.num_edges())).astype(graph.get_edge_dtype());
     
-    maelstrom::vector times_copy(maelstrom::PINNED, maelstrom::uint32, times.data(), times.size(), false);
+    maelstrom::vector times_copy(maelstrom::PINNED, maelstrom::int32, times.data(), times.size(), false);
     times.clear();
-    graph.declare_edge_property("time", maelstrom::DEVICE, maelstrom::uint32, graph.num_edges());
+    graph.declare_edge_property("time", maelstrom::DEVICE, maelstrom::int32, graph.num_edges());
     graph.set_edge_properties("time", erange, times_copy);
     times_copy.clear();
     std::cout << "set times" << std::endl;
@@ -303,43 +310,71 @@ int main(int argc, char* argv[]) {
             using gremlinxx::values;
             using gremlinxx::outE;
             using gremlinxx::identity;
+            using gremlinxx::select;
+            using gremlinxx::property;
+
             using gremlinxx::Scope;
             using gremlinxx::ScopeContext;
+            using gremlinxx::Vertex;
             
-            size_t start_vertex_id = std::any_cast<size_t>(g->V().has(NAME, std::string("KMRY")).id().next());
-            std::cout << "Start vertex: " << start_vertex_id << std::endl;
+            //auto start_v = "KHOU"; // out-degree 3713 in flights-1M
+            //auto start_v = "KLAX"; // out-degree 16679 in flights-1M
+            auto start_v = "YMML"; // out-degree 6745 in flights-1M
+            //auto start_v = "KMRY"; // for flights-full
 
-            uint32_t days = 4;
-            uint32_t time_start = 400;
-            uint32_t time_end = time_start + days + 1;
+            Vertex start_vertex = std::any_cast<Vertex>(g->V().has(NAME, std::string(start_v)).next());
+            std::cout << "Start vertex: " << start_vertex.id << std::endl;
+
+            int32_t days = 4;
+            //int32_t time_start = 400;
+            int32_t time_start = 0;
+            int32_t time_end = time_start + days + 1;
             std::cout << "Time window: [" << time_start << ", " << time_end << ")" << std::endl;
 
             // do traversals
-            auto result = g->V(start_vertex_id).property("visited", 1).sideEffect("last_time", time_start - 1).repeat(
-                outE()
-                  .has("time", gremlinxx::P::lte(time_end))
-                  .elementMap({"time"})
-                  .where("time", gremlinxx::P::gt("last_time"))
-                  .as("last_e")
-                  .values("time").as("last_time")
-                  .select("last_e")
-                  .inV()
-                  .elementMap({NAME})
-                  .min(ScopeContext(Scope::local, NAME)) // gets the min for each airport (greedy algorithm, will still get same result)
-                  .hasNot("visited")
-                  .property("visited", 1)
-            ).emit(identity()).count().next();
+            std::vector<Vertex> v_current = {start_vertex};
+            
+            g->V(v_current).property("last_time", time_start - 1).iterate();
+
+            graph.declare_vertex_property(
+                "visited",
+                maelstrom::DEVICE,
+                maelstrom::int32
+            );
+
+            g->V(v_current)
+                .repeat(
+                    property("visited", 1)
+                    .elementMap({"last_time"}) // semantics different from gremlin-java (saves to se map)
+                    .outE().has("time", gremlinxx::P::lte(time_end))
+                    .elementMap({"time"}) 
+                    .where("time", gremlinxx::P::gt("last_time"))
+                    .as("last_e")
+                    .values("time").as("last_time")
+                    .select("last_e")
+                    .inV()
+                    .hasNot("visited")
+                    .elementMap({NAME})
+                    .as("v")
+                    .select("last_time")
+                    .min(ScopeContext(Scope::local, NAME)) // gets the min for each airport (greedy algorithm, will still get same result)
+                    .select("v")
+                    .property("last_time", select("last_time"))
+                ).iterate();
+
+                size_t v_total = std::any_cast<size_t>(g->V().has("visited").count().next());
+
+                std::cout << "count: " << v_total << std::endl;
+            
+
             // From the start airport, how many airports can we visit within 4 days,
             // assuming that after each stop, there is 1 day of processing,
             // so the next flight must occur on the next day.
-
-            std::cout << "count: " << std::any_cast<size_t>(result) << std::endl;
 
             end = std::chrono::system_clock::now();
             elapsed = end-start;
             std::cerr << "Temporal shortest path time: " << elapsed.count() << " seconds." << std::endl;
 
-            // print some validation text
 
         } catch(const std::exception& err) {
             std::cout << "An error occurred: " << err.what() << std::endl;

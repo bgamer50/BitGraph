@@ -199,6 +199,7 @@ namespace bitgraph {
                 this->traverser_storage,
                 current_edges.size()
             );
+            for(size_t k = 0; k < 10; ++k) std::cout << std::any_cast<gremlinxx::Vertex>(result_vertices.get(k)).id << std::endl;
         }
 
         if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {

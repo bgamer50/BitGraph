@@ -79,6 +79,8 @@ int main(int argc, char* argv[]) {
     std::cout << "File read complete." << std::endl;
     fclose(f);
 
+    std::cout << "read " << names.size() << " vertices" << std::endl;
+
     graph.add_vertices(names.size());
     std::cout << "Vertices added." << std::endl;
 
