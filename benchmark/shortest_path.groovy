@@ -37,9 +37,11 @@ s = new Scanner(new File(edges_file));
 s.useDelimiter("\n")
 
 k=0
+//limit = 1e6
+limit = 1e10
 start_day = LocalDate.parse("2019-01-01").toEpochDay();
 header = s.nextLine()
-while(s.hasNextLine() && (k < 1e6)) {
+while(s.hasNextLine() && (k < limit)) {
 	++k;
 	if(k % 1000 == 0) println(k);
 

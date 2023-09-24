@@ -17,11 +17,12 @@ names = new HashSet<String>(100000);
 
 startTime = System.currentTimeMillis()
 k=0
-while(s.hasNextBigInteger()) {
+//s.nextLine(); s.nextLine(); s.nextLine(); s.nextLine();
+while(s.hasNextInt()) {
 	++k;
 	if(k % 1000 == 0) println(k);
-	i = s.nextBigInteger().toString();
-	j = s.nextBigInteger().toString();
+	i = s.nextInt().toString();
+	j = s.nextInt().toString();
 	if(!names.contains(i)) v1 = g.addV(LABEL_V).property(NAME, i).next();
 	else v1 = g.V().has(LABEL_V, NAME, i).next();
 
