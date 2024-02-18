@@ -206,7 +206,9 @@ int main(int argc, char* argv[]) {
     std::getline(f_edges, line, '\n'); line.clear(); // skip header
     size_t e_id = 0;
     size_t k = 0;
-    while(!f_edges.eof() && k < 1e6) {
+    size_t limit = 1e6;
+    //size_t limit = 1e10;
+    while(!f_edges.eof() && k < limit) {
         ++k;
         std::getline(f_edges, line, '\n');
 
@@ -334,6 +336,12 @@ int main(int argc, char* argv[]) {
             // do traversals
             std::vector<Vertex> v_current = {start_vertex};
             
+            graph.declare_vertex_property(
+                "last_time",
+                maelstrom::DEVICE,
+                maelstrom::int32
+            );
+
             g->V(v_current).property("last_time", time_start - 1).iterate();
 
             graph.declare_vertex_property(
