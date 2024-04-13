@@ -36,7 +36,7 @@ maelstrom::dtype_t maelstrom_dtype_from_dlpack_dtype(nb::dlpack::dtype t) {
     throw std::runtime_error("Unsupported data type");
 }
 
-NB_MODULE(PyBitGraph, m) {
+NB_MODULE(pybitgraph, m) {
     nb::class_<bitgraph::BitGraph>(m, "BitGraph")
         .def("__init__",
             [](
@@ -61,7 +61,13 @@ NB_MODULE(PyBitGraph, m) {
                     default_property_m_storage,
                     transfer_m_storage
                 );
-            }
+            },
+            "vertex_dtype"_a,
+            "edge_dtype"_a,
+            "structure_storage"_a,
+            "default_property_storage"_a,
+            "transfer_storage"_a,
+            "Constructs a BitGraph object representing a graph."
         )
         .def("add_edges", 
             [](
@@ -82,12 +88,35 @@ NB_MODULE(PyBitGraph, m) {
                 maelstrom::vector dst_view = maelstrom::vector(maelstrom::HOST, dst_dtype, dst.data(), dst.size(), true);
 
                 bg.add_edges(src_view, dst_view, label);
-        })
+            },
+            "src_array"_a,
+            "dst_array"_a,
+            "label"_a,
+            "Adds edges to the graph."
+        )
         .def("add_vertices",
             [](
                 bitgraph::BitGraph& bg,
-                uint32_t size
+                size_t size
             ) {
                 bg.add_vertices(size);
-        });
+            },
+            "num_vertices"_a,
+            "Adds the given number of vertices to the graph."
+        )
+        .def("traversal",
+            [](
+                bitgraph::BitGraph& bg
+            ) {
+                nb::module_::import_("pygremlinxx");
+                gremlinxx::GraphTraversalSource* source = new bitgraph::BitGraphTraversalSource(&bg);
+                return source;
+            }
+        )
+        .def("num_vertices",
+             &bitgraph::BitGraph::num_vertices
+        )
+        .def("num_edges",
+             &bitgraph::BitGraph::num_edges
+        );
 }

@@ -133,16 +133,16 @@ execute_process(
 list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
 find_package(nanobind CONFIG REQUIRED)
 
-nanobind_add_module(PyBitGraph bindings/PyBitGraph.cpp)
+nanobind_add_module(pybitgraph bindings/PyBitGraph.cpp)
 target_link_libraries(
-    PyBitGraph 
+    pybitgraph 
     PRIVATE  
         bitgraph 
         gremlinxx 
         maelstrom
 )
 target_link_directories(
-       PyBitGraph
+       pybitgraph
        PRIVATE
          "../maelstrom/" 
          "../gremlin++/"
