@@ -78,7 +78,9 @@ namespace bitgraph {
 
     void BitGraph::set_vertex_properties(std::string property_name, maelstrom::vector& vertices, maelstrom::vector& property_values) {
         if(vertices.get_dtype() != this->vertex_dtype) {
-            throw std::runtime_error("Vertex array did not have proper datatype!");
+            std::stringstream sx;
+            sx << "Vertex array did not have proper datatype! (Expected " << this->vertex_dtype.name << " but got " << vertices.get_dtype().name << ")";
+            throw std::invalid_argument(sx.str());
         }
 
         auto p = this->vertex_properties.find(property_name);
@@ -93,10 +95,20 @@ namespace bitgraph {
             );
         }
 
-        this->vertex_properties[property_name]->set(
-            vertices,
-            property_values
-        );
+        auto mem_type = this->vertex_properties[property_name]->get_mem_type();
+        if((mem_type == maelstrom::MANAGED || mem_type == maelstrom::DEVICE) && vertices.get_mem_type() == maelstrom::HOST && vertices.is_view()) {
+            auto vertices_d = maelstrom::as_device_vector(vertices);
+            auto property_values_d = maelstrom::as_device_vector(property_values);
+            this->vertex_properties[property_name]->set(
+                vertices_d,
+                property_values_d
+            );
+        } else {
+            this->vertex_properties[property_name]->set(
+                vertices,
+                property_values
+            );
+        }
     }
 
     void BitGraph::set_edge_properties(std::string property_name, maelstrom::vector& edges, maelstrom::vector& property_values) {

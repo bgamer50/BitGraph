@@ -147,13 +147,20 @@ NB_MODULE(pybitgraph, m) {
                 auto m_vertices_dtype = maelstrom_dtype_from_dlpack_dtype(vertices.dtype());
                 auto m_values_dtype = maelstrom_dtype_from_dlpack_dtype(property_values.dtype());
 
+                if(m_vertices_dtype.prim_type != bg.get_vertex_dtype().prim_type) {
+                    std::stringstream sx;
+                    sx << "Vertex type of provided vertices (" << m_vertices_dtype.name << ") does not match the graph vertex type";
+                    throw std::invalid_argument(sx.str());
+                }
+
                 maelstrom::vector m_vertices_view(
                     maelstrom::HOST,
-                    m_vertices_dtype,
+                    bg.get_vertex_dtype(),
                     vertices.data(),
                     vertices.size(),
                     true
                 );
+                m_vertices_view.pin();
 
                 maelstrom::vector m_values_view(
                     maelstrom::HOST,
@@ -162,8 +169,11 @@ NB_MODULE(pybitgraph, m) {
                     property_values.size(),
                     true
                 );
+                m_values_view.pin();
 
                 bg.set_vertex_properties(name, m_vertices_view, m_values_view);
+                m_vertices_view.unpin();
+                m_values_view.unpin();
             }
         );
 }
