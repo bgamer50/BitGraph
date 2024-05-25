@@ -118,5 +118,52 @@ NB_MODULE(pybitgraph, m) {
         )
         .def("num_edges",
              &bitgraph::BitGraph::num_edges
+        )
+        .def("declare_vertex_property",
+            [](
+                bitgraph::BitGraph& bg,
+                std::string name,
+                std::string mem_type,
+                std::string dtype,
+                size_t initial_size
+            ){
+                auto m_storage = maelstrom::storage_string_mapping[mem_type];
+                auto m_dtype = maelstrom::dtype_string_mapping[dtype];
+                bg.declare_vertex_property(
+                    name,
+                    m_storage,
+                    m_dtype,
+                    initial_size
+                );
+            }
+        )
+        .def("set_vertex_properties",
+            [](
+                bitgraph::BitGraph& bg,
+                std::string name,
+                nb::ndarray<> vertices,
+                nb::ndarray<> property_values
+            ){
+                auto m_vertices_dtype = maelstrom_dtype_from_dlpack_dtype(vertices.dtype());
+                auto m_values_dtype = maelstrom_dtype_from_dlpack_dtype(property_values.dtype());
+
+                maelstrom::vector m_vertices_view(
+                    maelstrom::HOST,
+                    m_vertices_dtype,
+                    vertices.data(),
+                    vertices.size(),
+                    true
+                );
+
+                maelstrom::vector m_values_view(
+                    maelstrom::HOST,
+                    m_values_dtype,
+                    property_values.data(),
+                    property_values.size(),
+                    true
+                );
+
+                bg.set_vertex_properties(name, m_vertices_view, m_values_view);
+            }
         );
 }

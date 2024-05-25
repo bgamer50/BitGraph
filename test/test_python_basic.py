@@ -1,9 +1,11 @@
 from pybitgraph import (
     BitGraph
 )
-from pygremlinxx import TraversalStrategy
+from pygremlinxx import TraversalStrategy, GraphTraversal
 
 import numpy as np
+
+__ = GraphTraversal()
 
 src = np.array([0,1,2,3,4,5])
 dst = np.array([3,2,5,1,0,4])
@@ -33,5 +35,7 @@ print(g.V().id().toArray())
 
 print(f'num vertices: {graph.num_vertices()}')
 
-print('explain:', g.withoutStrategies().V().has("color", "gray").explain())
+print(g.V().has("color", "gray").repeat(__.out()).times(3).toArray())
 print("s:", TraversalStrategy("RepeatStepCompletionStrategy"))
+
+print(GraphTraversal().V().explain())
