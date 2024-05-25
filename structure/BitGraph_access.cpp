@@ -96,7 +96,7 @@ namespace bitgraph {
         }
 
         auto mem_type = this->vertex_properties[property_name]->get_mem_type();
-        if((mem_type == maelstrom::MANAGED || mem_type == maelstrom::DEVICE) && vertices.get_mem_type() == maelstrom::HOST && vertices.is_view()) {
+        if(mem_type == maelstrom::MANAGED || mem_type == maelstrom::DEVICE) {
             auto vertices_d = maelstrom::as_device_vector(vertices);
             auto property_values_d = maelstrom::as_device_vector(property_values);
             this->vertex_properties[property_name]->set(
@@ -128,10 +128,20 @@ namespace bitgraph {
             );
         }
 
-        this->edge_properties[property_name]->set(
-            edges,
-            property_values
-        );
+        auto mem_type = this->edge_properties[property_name]->get_mem_type();
+        if(mem_type == maelstrom::MANAGED || mem_type == maelstrom::DEVICE) {
+            auto edges_d = maelstrom::as_device_vector(edges);
+            auto property_values_d = maelstrom::as_device_vector(property_values);
+            this->edge_properties[property_name]->set(
+                edges,
+                property_values
+            );
+        } else {
+            this->edge_properties[property_name]->set(
+                edges,
+                property_values
+            );
+        }
     }
 
     void BitGraph::declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size) {
