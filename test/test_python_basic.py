@@ -33,5 +33,5 @@ print(g.V().id().toArray())
 
 print(f'num vertices: {graph.num_vertices()}')
 
-print('explain:', g.withoutStrategies().V().has("name", "joe").out().explain())
+print('explain:', g.withoutStrategies().V().has("color", "gray").explain())
 print("s:", TraversalStrategy("RepeatStepCompletionStrategy"))

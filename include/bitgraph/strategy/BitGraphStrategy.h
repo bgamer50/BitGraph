@@ -7,6 +7,6 @@
 
 namespace bitgraph {
 
-    void bitgraph_strategy(std::vector<std::shared_ptr<gremlinxx::TraversalStep>>& steps);
+    extern gremlinxx::TraversalStrategy BitGraphStrategy;
 
 }

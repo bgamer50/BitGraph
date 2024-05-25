@@ -11,7 +11,7 @@ namespace bitgraph {
             std::type_index(typeid(std::string)), gr->get_string_dtype()
         );
 
-        this->withStrategy(bitgraph::bitgraph_strategy);
-        this->withStrategy(gremlinxx::limit_supporting_strategy);
+        this->withStrategy(bitgraph::BitGraphStrategy);
+        this->withStrategy(gremlinxx::LimitSupportingStrategy);
     }
 }

@@ -1,7 +1,7 @@
 FROM nvidia/cuda:12.0.1-devel-ubuntu22.04
 
 RUN apt-get update
-RUN apt-get install -y git python3 python3-pip wget ninja-build mpich libopenmpi-dev
+RUN apt-get install -y git python3 python3-pip wget ninja-build mpich libopenmpi-dev openjdk-8-jre-headless
 RUN python3 -m pip install nanobind
 
 RUN mkdir /opt/cmake
