@@ -18,6 +18,7 @@ data/facebook.txt
 data/twitter.txt
 data/gplus.txt
 data/temporal
+data/ogb
 CMakeFiles/
 CMakeCache.txt
 *.cmake
