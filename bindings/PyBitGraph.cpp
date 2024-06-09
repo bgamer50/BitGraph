@@ -175,5 +175,7 @@ NB_MODULE(pybitgraph, m) {
                 m_vertices_view.unpin();
                 m_values_view.unpin();
             }
-        );
+        )
+        .def("get_vertex_property_names", &bitgraph::BitGraph::get_vertex_property_names)
+        .def("get_edge_property_names", &bitgraph::BitGraph::get_edge_property_names);
 }
