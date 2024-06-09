@@ -1,3 +1,9 @@
+Version 1.0.3 (Expected June 2024)
+
+This release of BitGraph adds Python bindings and supports new features in Gremlin++, including better traversal strategies and optimizations.
+
+---------------------------------------------------------------
+
 Version 1.0.0 (September 26, 2023)
 
 This is a major refactor of BitGraph that uses _Maelstrom_ for almost all operations, including sparse matrix operations, vector operations, and hash tables.
