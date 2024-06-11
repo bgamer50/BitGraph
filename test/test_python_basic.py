@@ -38,3 +38,8 @@ print(f'num vertices: {graph.num_vertices()}')
 #print(g.V().has("color", "gray").repeat(__().out()).times(3).toArray())
 
 print(GraphTraversal().V().explain())
+
+trv = g.E().sample(4).subgraph('sg')
+trv.iterate()
+sg = trv.getTraversalProperty('sg')
+print(sg)

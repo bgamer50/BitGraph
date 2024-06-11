@@ -140,7 +140,7 @@ namespace bitgraph {
 			virtual std::pair<maelstrom::vector, maelstrom::vector> toV(maelstrom::vector& current_edges, gremlinxx::Direction direction);
 
             using gremlinxx::Graph::subgraph;
-            inline virtual std::shared_ptr<gremlinxx::Graph> subgraph(maelstrom::vector& subgraph_edges) { throw std::runtime_error("unimplemented"); }
+            inline virtual std::shared_ptr<gremlinxx::Graph> subgraph(maelstrom::vector& subgraph_edges) { return std::shared_ptr<gremlinxx::Graph>(new bitgraph::BitGraph()); }
 
             using gremlinxx::Graph::num_vertices;
             inline virtual size_t num_vertices() { return this->matrix->num_rows(); }
