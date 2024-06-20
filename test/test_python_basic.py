@@ -35,11 +35,14 @@ print(g.V().id().toArray())
 
 print(f'num vertices: {graph.num_vertices()}')
 
-#print(g.V().has("color", "gray").repeat(__().out()).times(3).toArray())
+print(g.V().has("name", "joe").repeat(__().out()).times(3).toArray())
 
 print(GraphTraversal().V().explain())
 
+print(g.E().sample(4).subgraph('sg').explain())
 trv = g.E().sample(4).subgraph('sg')
 trv.iterate()
 sg = trv.getTraversalProperty('sg')
-print(sg)
+
+h = sg.traversal()
+print(h)

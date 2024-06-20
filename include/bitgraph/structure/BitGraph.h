@@ -102,6 +102,14 @@ namespace bitgraph {
 
             virtual void declare_edge_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
 
+            virtual std::pair<std::optional<maelstrom::vector>, std::optional<maelstrom::vector>> view_vertex_property(std::string property_name, bool view_keys=true, bool view_values=true);
+
+            virtual std::pair<std::optional<maelstrom::vector>, std::optional<maelstrom::vector>> view_edge_property(std::string property_name, bool view_keys=true, bool view_values=true);
+
+            virtual size_t get_vertex_property_num_entries(std::string proprety_name);
+
+            virtual size_t get_edge_property_num_entries(std::string property_name);
+
             using gremlinxx::Graph::get_vertex_properties;
             virtual std::pair<maelstrom::vector, maelstrom::vector> get_vertex_properties(std::string property_name, maelstrom::vector& vertices, bool return_values=true);
 

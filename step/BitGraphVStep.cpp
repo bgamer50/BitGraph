@@ -4,6 +4,11 @@
 #include "maelstrom/algorithms/arange.h"
 #include "maelstrom/algorithms/set.h"
 #include "maelstrom/algorithms/increment.h"
+#include "maelstrom/algorithms/filter.h"
+#include "maelstrom/algorithms/remove_if.h"
+#include "maelstrom/algorithms/intersection.h"
+#include "maelstrom/algorithms/sort.h"
+#include "maelstrom/algorithms/select.h"
 
 #include "maelstrom/util/any_utils.h"
 
@@ -22,10 +27,54 @@ namespace bitgraph {
         maelstrom::vector query_vertices;
 
         if(this->element_ids.empty()) {
-            query_vertices = maelstrom::arange(
-                traverser_storage,
-                this->limit ? std::min(graph->num_vertices(), *(this->limit)) : graph->num_vertices()
-            ).astype(graph->vertex_dtype);
+            if(this->predicates.empty()) {
+                query_vertices = maelstrom::arange(
+                    traverser_storage,
+                    this->limit ? std::min(graph->num_vertices(), *(this->limit)) : graph->num_vertices()
+                ).astype(graph->vertex_dtype);
+            } else {
+                for(auto& p : this->predicates) {
+                    // heuristic for whether to get all properties and do a set intersection instead of just a lookup
+                    if(query_vertices.empty() || graph->get_vertex_property_num_entries(p.first) < query_vertices.size()) {
+                        std::optional<maelstrom::vector> keys;
+                        std::optional<maelstrom::vector> vals;
+                        std::tie(keys, vals) = graph->view_vertex_property(p.first, true, p.second.operand.has_value());
+
+                        if(p.second.operand.has_value()) {
+                            auto ix = maelstrom::filter(*vals, maelstrom::EQUALS, p.second.operand);
+                            *keys = std::move(maelstrom::select(*keys, ix));
+                        }
+
+                        maelstrom::sort(*keys);
+                        if(query_vertices.empty()) {
+                            query_vertices = std::move(*keys);
+                        } else {
+                            // intersection ensures the output is sorted
+                            auto iix = maelstrom::intersection(query_vertices, *keys);
+                            query_vertices = std::move(
+                                maelstrom::select(query_vertices, iix)
+                            );
+                        }
+                    } else {
+                        // just do a lookup, it is probably faster and definitely more memory-efficient
+                        maelstrom::vector values;
+                        maelstrom::vector output_origin;
+                        std::tie(values, output_origin) = graph->get_vertex_properties(p.first, query_vertices, p.second.operand.has_value());
+
+                        if(p.second.operand.has_value()) {
+                            auto ix = maelstrom::filter(values, maelstrom::EQUALS, p.second.operand);
+                            output_origin = std::move(maelstrom::select(output_origin, ix));
+                        }
+
+                        query_vertices = std::move(
+                            maelstrom::select(query_vertices, output_origin)
+                        );
+                    }
+
+                    // immediately quit if all vertices were ruled out, otherwise will fill with invalid keys
+                    if(query_vertices.empty()) break;
+                }
+            }
         } else {
             query_vertices = maelstrom::make_vector_from_anys(graph->traverser_storage, this->element_ids).astype(graph->vertex_dtype);
             

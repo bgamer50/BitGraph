@@ -31,6 +31,7 @@ add_library(
     step/BitGraphVStep.cpp
     
     strategy/BitGraphStrategy.cpp
+    strategy/BitGraphSelectionStrategy.cpp
 )
 
 target_compile_options(

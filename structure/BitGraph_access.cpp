@@ -192,6 +192,66 @@ namespace bitgraph {
         }
     }
 
+    size_t BitGraph::get_vertex_property_num_entries(std::string prop_name) {
+        return this->vertex_properties[prop_name]->size();
+    }
+
+    size_t BitGraph::get_edge_property_num_entries(std::string prop_name) {
+        return this->vertex_properties[prop_name]->size();
+    }
+
+    std::pair<std::optional<maelstrom::vector>, std::optional<maelstrom::vector>> BitGraph::view_vertex_property(std::string prop_name, bool view_keys, bool view_values) {
+        std::optional<maelstrom::vector> keys;
+        std::optional<maelstrom::vector> values;
+        if(view_keys) {
+            if(view_values) {
+                maelstrom::vector k, v;
+                std::tie(k, v) = this->vertex_properties[prop_name]->get_items();
+                keys.emplace(std::move(k));
+                values.emplace(std::move(v));
+            } else {
+                keys = std::make_optional(
+                    std::move(this->vertex_properties[prop_name]->get_keys())
+                );
+            }
+        } else {
+            values = std::make_optional(
+                std::move(this->vertex_properties[prop_name]->get_values())
+            );
+        }
+
+        return std::make_pair(
+            std::move(keys),
+            std::move(values)
+        );
+    }
+
+    std::pair<std::optional<maelstrom::vector>, std::optional<maelstrom::vector>> BitGraph::view_edge_property(std::string prop_name, bool view_keys, bool view_values) {
+        std::optional<maelstrom::vector> keys;
+        std::optional<maelstrom::vector> values;
+        if(view_keys) {
+            if(view_values) {
+                maelstrom::vector k, v;
+                std::tie(k, v) = this->edge_properties[prop_name]->get_items();
+                keys.emplace(std::move(k));
+                values.emplace(std::move(v));
+            } else {
+                keys = std::make_optional(
+                    std::move(this->edge_properties[prop_name]->get_keys())
+                );
+            }
+        } else {
+            values = std::make_optional(
+                std::move(this->edge_properties[prop_name]->get_values())
+            );
+        }
+
+        return std::make_pair(
+            std::move(keys),
+            std::move(values)
+        );
+    }
+
     std::vector<std::string> BitGraph::get_vertex_property_names() {
         std::vector<std::string> names;
         names.reserve(this->vertex_properties.size());

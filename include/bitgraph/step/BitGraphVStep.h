@@ -12,6 +12,7 @@ namespace bitgraph {
         private:
             std::vector<std::any> element_ids;
             std::optional<size_t> limit = {};
+            std::vector<std::pair<std::string, gremlinxx::P>> predicates;
 
         public:
             BitGraphVStep(std::vector<std::any> element_ids);
@@ -25,9 +26,28 @@ namespace bitgraph {
             using gremlinxx::LimitSupportingStep::get_limit;
             virtual std::optional<size_t> get_limit() { return this->limit; }
 
+            inline virtual void add_predicate(std::string key, gremlinxx::P val) { this->predicates.push_back(std::make_pair(key, val)); }
+
+            inline virtual std::vector<std::pair<std::string, gremlinxx::P>> get_predicates() { return this->predicates; }
+
             using gremlinxx::TraversalStep::getInfo;
             virtual std::string getInfo() {
-                return "BitGraphVStep()";
+                std::stringstream sx;
+                sx << "BitGraphVStep(";
+
+                if(!this->predicates.empty()) {
+                    for(auto it = predicates.begin(); it != predicates.end(); ++it) {
+                        sx << it->first << " " << maelstrom::comparator_names[it->second.comparison] << " " << string_any(it->second.operand);
+                        if(it != predicates.end() - 1) sx << ", ";
+                    }
+
+                    if(this->limit) sx << ", ";
+                }
+
+                if(this->limit) sx << *this->limit;
+                
+                sx << ")";
+                return sx.str();
             }
     };
 
