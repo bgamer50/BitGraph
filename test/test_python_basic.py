@@ -46,3 +46,5 @@ sg = trv.getTraversalProperty('sg')
 
 h = sg.traversal()
 print(h)
+
+print(g.V().sample(4).has('name','joe').has('age', 23).explain())
