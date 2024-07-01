@@ -12,12 +12,14 @@ test/test.*
 *.xml
 prof.txt
 gprof.txt
+*.nsys-rep
 data/friendster.txt
 data/livejournal.txt
 data/facebook.txt
 data/twitter.txt
 data/gplus.txt
 data/temporal
+data/patents
 data/ogb
 CMakeFiles/
 CMakeCache.txt
