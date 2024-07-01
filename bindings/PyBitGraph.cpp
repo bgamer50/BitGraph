@@ -4,6 +4,8 @@
 #include <nanobind/stl/bind_vector.h>
 #include "gremlinxx/gremlinxx.h"
 #include "bitgraph/structure/BitGraph.h"
+#include "bitgraph/strategy/BitGraphSelectionStrategy.h"
+#include "bitgraph/strategy/BitGraphStrategy.h"
 #include "maelstrom/containers/vector.h"
 #include "maelstrom/util/any_utils.h"
 
@@ -160,7 +162,7 @@ NB_MODULE(pybitgraph, m) {
                     vertices.size(),
                     true
                 );
-                m_vertices_view.pin();
+                //m_vertices_view.pin();
 
                 maelstrom::vector m_values_view(
                     maelstrom::HOST,
@@ -169,13 +171,15 @@ NB_MODULE(pybitgraph, m) {
                     property_values.size(),
                     true
                 );
-                m_values_view.pin();
+                //m_values_view.pin();
 
                 bg.set_vertex_properties(name, m_vertices_view, m_values_view);
-                m_vertices_view.unpin();
-                m_values_view.unpin();
+                //m_vertices_view.unpin();
+                //m_values_view.unpin();
             }
         )
         .def("get_vertex_property_names", &bitgraph::BitGraph::get_vertex_property_names)
-        .def("get_edge_property_names", &bitgraph::BitGraph::get_edge_property_names);
+        .def("get_edge_property_names", &bitgraph::BitGraph::get_edge_property_names)
+        .def_ro_static("BitGraphSelectionStrategy", &bitgraph::BitGraphSelectionStrategy)
+        .def_ro_static("BitGraphStrategy", &bitgraph::BitGraphStrategy);
 }

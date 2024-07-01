@@ -41,7 +41,7 @@ namespace bitgraph {
                         std::tie(keys, vals) = graph->view_vertex_property(p.first, true, p.second.operand.has_value());
 
                         if(p.second.operand.has_value()) {
-                            auto ix = maelstrom::filter(*vals, maelstrom::EQUALS, p.second.operand);
+                            auto ix = maelstrom::filter(*vals, p.second.comparison, p.second.operand);
                             *keys = std::move(maelstrom::select(*keys, ix));
                         }
 
@@ -74,6 +74,10 @@ namespace bitgraph {
                     // immediately quit if all vertices were ruled out, otherwise will fill with invalid keys
                     if(query_vertices.empty()) break;
                 }
+
+                // Make sure the limit is applied at the end if present.
+                // Resizing to the current size is a no-op in maelstrom.
+                query_vertices.resize(std::min(query_vertices.size(), this->limit.value_or(query_vertices.size())));
             }
         } else {
             query_vertices = maelstrom::make_vector_from_anys(graph->traverser_storage, this->element_ids).astype(graph->vertex_dtype);

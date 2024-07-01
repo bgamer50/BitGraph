@@ -92,6 +92,9 @@ namespace bitgraph {
             using gremlinxx::Graph::add_edges;
 			virtual maelstrom::vector add_edges(maelstrom::vector& from_vertices, maelstrom::vector& to_vertices, std::string label);
 
+            using gremlinxx::Graph::degree;
+            virtual std::pair<maelstrom::vector, maelstrom::vector> degree(maelstrom::vector& current_vertices, std::vector<std::string>& labels, gremlinxx::Direction direction);
+
             using gremlinxx::Graph::set_vertex_properties;
             virtual void set_vertex_properties(std::string property_name, maelstrom::vector& vertices, maelstrom::vector& property_values);
 

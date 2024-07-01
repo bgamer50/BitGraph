@@ -47,4 +47,13 @@ sg = trv.getTraversalProperty('sg')
 h = sg.traversal()
 print(h)
 
-print(g.V().sample(4).has('name','joe').has('age', 23).explain())
+g.addE('e')._from(__().V(6)).to(__().V(5)).iterate()
+g.addE('e')._from(__().V(6)).to(__().V(4)).iterate()
+g.addE('e')._from(__().V(0)).to(__().V(4)).iterate()
+
+from time import perf_counter_ns
+start_time = perf_counter_ns()
+print(g.V().order().by(__().out().count(), "DESC").toArray())
+end_time = perf_counter_ns()
+
+print((end_time - start_time), "ns")
