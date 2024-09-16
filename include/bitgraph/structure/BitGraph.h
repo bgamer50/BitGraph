@@ -46,6 +46,9 @@ namespace bitgraph {
             std::unordered_map<std::string, std::unique_ptr<maelstrom::hash_table>> vertex_properties;
             std::unordered_map<std::string, std::unique_ptr<maelstrom::hash_table>> edge_properties;
 
+            // Embeddings
+            std::unordered_map<std::string, maelstrom::vector> vertex_embeddings;
+
             // String index
             maelstrom::string_index<uint64_t> string_index{BITGRAPH_INVALID_STRING, std::numeric_limits<uint64_t>::max()};
             maelstrom::string_index<uint8_t> edge_label_index{BITGRAPH_INVALID_STRING, std::numeric_limits<uint8_t>::max()};
@@ -101,6 +104,9 @@ namespace bitgraph {
             using gremlinxx::Graph::set_edge_properties;
             virtual void set_edge_properties(std::string property_name, maelstrom::vector& edges, maelstrom::vector& property_values);
 
+            using gremlinxx::Graph::set_vertex_embeddings;
+            virtual void set_vertex_embeddings(std::string emb_name, maelstrom::vector& vertices, maelstrom::vector& embeddings, std::any default_val=0);
+
             virtual void declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
 
             virtual void declare_edge_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
@@ -120,6 +126,9 @@ namespace bitgraph {
 
             using gremlinxx::Graph::get_edge_properties;
             virtual std::pair<maelstrom::vector, maelstrom::vector> get_edge_properties(std::string property_name, maelstrom::vector& edges, bool return_values=true);
+
+            using gremlinxx::Graph::get_vertex_embeddings;
+            virtual maelstrom::vector get_vertex_embeddings(std::string emb_name, maelstrom::vector& vertices);
 
             using gremlinxx::Graph::get_vertex_property_names;
             virtual std::vector<std::string> get_vertex_property_names();

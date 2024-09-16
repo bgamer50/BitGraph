@@ -3,6 +3,8 @@
 #include "maelstrom/algorithms/filter.h"
 #include "maelstrom/algorithms/select.h"
 #include "maelstrom/algorithms/arange.h"
+#include "maelstrom/algorithms/assign.h"
+#include "maelstrom/algorithms/set.h"
 
 #include "maelstrom/util/any_utils.h"
 
@@ -76,6 +78,33 @@ namespace bitgraph {
         );
     }
 
+    maelstrom::vector BitGraph::get_vertex_embeddings(std::string emb_name, maelstrom::vector& vertices) {
+        auto p = this->vertex_embeddings.find(emb_name);
+        if(p == this->vertex_embeddings.end()) {
+            throw std::invalid_argument("Attempted to get a nonexistent embedding");
+        }
+        auto& emb = p->second;
+
+        size_t emb_stride = p->second.size() / this->num_vertices();
+        auto vertices_host_view = maelstrom::as_host_vector(vertices).astype(maelstrom::uint64);
+
+        maelstrom::vector dest(
+            vertices.get_mem_type(),
+            emb.get_dtype()
+        );
+        dest.reserve(emb_stride * vertices.size());
+
+        for(size_t k = 0; k < vertices_host_view.size(); ++k) {
+            size_t v = std::any_cast<size_t>(vertices_host_view.get(k));
+            auto ix_k = maelstrom::arange(maelstrom::DEVICE, v * emb_stride, (v+1) * emb_stride);
+            
+            auto z = maelstrom::select(emb, ix_k);
+            dest.insert(z);
+        }
+
+        return dest;
+    }
+
     void BitGraph::set_vertex_properties(std::string property_name, maelstrom::vector& vertices, maelstrom::vector& property_values) {
         if(vertices.get_dtype() != this->vertex_dtype) {
             std::stringstream sx;
@@ -141,6 +170,60 @@ namespace bitgraph {
                 edges,
                 property_values
             );
+        }
+    }
+
+    void BitGraph::set_vertex_embeddings(std::string emb_name, maelstrom::vector& vertices, maelstrom::vector& embeddings, std::any default_val) {
+        const size_t n_vertices = this->num_vertices();
+
+        if(vertices.empty()) {
+            this->vertex_embeddings[emb_name] = maelstrom::vector(
+                this->default_property_storage,
+                embeddings.get_dtype()
+            );
+            this->vertex_embeddings[emb_name].reserve(embeddings.size());
+            this->vertex_embeddings[emb_name].insert(embeddings);
+        } else {
+            const size_t emb_stride = embeddings.size() / vertices.size();
+
+            auto p = this->vertex_embeddings.find(emb_name);
+            if(p == this->vertex_embeddings.end()) {
+                this->vertex_embeddings[emb_name] = maelstrom::vector(
+                    this->default_property_storage,
+                    embeddings.get_dtype(),
+                    n_vertices * emb_stride
+                );
+                maelstrom::set(this->vertex_embeddings[emb_name], default_val);
+            }
+
+            auto emb_dtype = embeddings.get_dtype();
+            auto& stored_emb = this->vertex_embeddings[emb_name];
+            auto vertices_host_view = maelstrom::as_host_vector(vertices).astype(maelstrom::uint64);
+            auto range_ix = maelstrom::arange(maelstrom::DEVICE, emb_stride);
+            for(size_t k = 0; k < vertices_host_view.size(); ++k) {
+                size_t current_emb = std::any_cast<size_t>(vertices_host_view.get(k));
+                maelstrom::vector current_stored_emb(
+                    stored_emb.get_mem_type(),
+                    emb_dtype,
+                    static_cast<unsigned char*>(stored_emb.data()) + (current_emb * emb_stride * maelstrom::size_of(emb_dtype)),
+                    emb_stride,
+                    true
+                );
+
+                maelstrom::vector current_new_emb(
+                    embeddings.get_mem_type(),
+                    emb_dtype,
+                    static_cast<unsigned char*>(embeddings.data()) + (k * emb_stride * maelstrom::size_of(emb_dtype)),
+                    emb_stride,
+                    true
+                );
+
+                maelstrom::assign(
+                    current_stored_emb,
+                    range_ix,
+                    current_new_emb
+                );
+            }
         }
     }
 
