@@ -1,5 +1,6 @@
 #include "bitgraph/strategy/BitGraphSelectionStrategy.h"
 #include "bitgraph/step/BitGraphVStep.h"
+#include "bitgraph/step/Fuzzy.h"
 
 namespace bitgraph {
     gremlinxx::TraversalStrategy BitGraphSelectionStrategy = {
@@ -19,6 +20,17 @@ namespace bitgraph {
                             );
                         }
                         
+                        it = steps.erase(it+1) - 2;
+                    } else if(next_step->uid == LIKE_STEP) {
+                        gremlinxx::LikeStep* like_step = static_cast<gremlinxx::LikeStep*>(next_step.get());
+                        v_step->add_fuzzy(bitgraph::fuzzy_t{
+                            like_step->get_embeddings(),
+                            like_step->get_embedding_name(),
+                            like_step->get_embedding_stride(),
+                            like_step->get_match_threshold(),
+                            like_step->get_metric()
+                        });
+
                         it = steps.erase(it+1) - 2;
                     }
                 }

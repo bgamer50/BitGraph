@@ -26,12 +26,31 @@ namespace bitgraph {
 
         maelstrom::vector query_vertices;
 
+        size_t remaining_fuzzies = fuzzies.size();
         if(this->element_ids.empty()) {
             if(this->predicates.empty()) {
-                query_vertices = maelstrom::arange(
-                    traverser_storage,
-                    this->limit ? std::min(graph->num_vertices(), *(this->limit)) : graph->num_vertices()
-                ).astype(graph->vertex_dtype);
+                if(this->fuzzies.empty()) {
+                    query_vertices = maelstrom::arange(
+                        traverser_storage,
+                        this->limit ? std::min(graph->num_vertices(), *(this->limit)) : graph->num_vertices()
+                    ).astype(graph->vertex_dtype);
+                } else {
+                    auto f = fuzzies.back();
+                    auto emb = graph->vertex_embeddings.find(f.emb_name);
+                    if(emb == graph->vertex_embeddings.end()) {
+                        throw std::invalid_argument("No embedding with the given name exists!");
+                    }
+                    maelstrom::vector empty;
+                    auto sim = maelstrom::similarity(
+                        f.similarity_metric,
+                        emb->second,
+                        empty,
+                        f.embeddings,
+                        f.emb_stride
+                    );
+                    query_vertices = maelstrom::filter(sim, maelstrom::GREATER_THAN_OR_EQUAL, f.match_threshold);
+                    remaining_fuzzies -= 1;
+                }
             } else {
                 for(auto& p : this->predicates) {
                     // heuristic for whether to get all properties and do a set intersection instead of just a lookup
@@ -87,6 +106,26 @@ namespace bitgraph {
                 std::cerr << "warning: BitGraph currently does not check vertex validity" << std::endl;
                 BITGRAPH_VALIDITY_WARNING = true;
             }
+        }
+
+        for(size_t k = remaining_fuzzies; k > 0; --k) {
+            auto& f = fuzzies[k-1];
+            maelstrom::vector empty;
+            auto sim = maelstrom::similarity(
+                f.similarity_metric,
+                query_vertices,
+                empty,
+                f.embeddings,
+                f.emb_stride
+            );
+            auto q = maelstrom::filter(
+                sim,
+                maelstrom::GREATER_THAN_OR_EQUAL,
+                f.match_threshold
+            );
+            query_vertices = std::move(
+                maelstrom::select(query_vertices, q)
+            );
         }
 
         size_t num_traversers = traversers.size();

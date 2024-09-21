@@ -178,6 +178,37 @@ NB_MODULE(pybitgraph, m) {
                 //m_values_view.unpin();
             }
         )
+        .def("set_vertex_embeddings", 
+            [](
+                bitgraph::BitGraph& bg,
+                std::string emb_name,
+                nb::ndarray<> vertices,
+                nb::ndarray<> embeddings
+            ){
+                maelstrom::vector m_vertices_view(
+                    maelstrom::HOST,
+                    bg.get_vertex_dtype(),
+                    vertices.data(),
+                    vertices.size(),
+                    true
+                );
+
+                auto m_embeddings_dtype = maelstrom_dtype_from_dlpack_dtype(embeddings.dtype());
+                maelstrom::vector m_embeddings_view(
+                    maelstrom::HOST,
+                    m_embeddings_dtype,
+                    embeddings.data(),
+                    embeddings.size(),
+                    true
+                );
+
+                bg.set_vertex_embeddings(
+                    emb_name,
+                    m_vertices_view,
+                    m_embeddings_view
+                );
+            }
+        )
         .def("get_vertex_property_names", &bitgraph::BitGraph::get_vertex_property_names)
         .def("get_edge_property_names", &bitgraph::BitGraph::get_edge_property_names)
         .def_ro_static("BitGraphSelectionStrategy", &bitgraph::BitGraphSelectionStrategy)

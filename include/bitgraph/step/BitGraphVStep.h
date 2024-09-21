@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gremlinxx/gremlinxx.h"
+#include "bitgraph/step/Fuzzy.h"
 
 #include <optional>
 
@@ -13,6 +14,7 @@ namespace bitgraph {
             std::vector<std::any> element_ids;
             std::optional<size_t> limit = {};
             std::vector<std::pair<std::string, gremlinxx::P>> predicates;
+            std::vector<fuzzy_t> fuzzies;
 
         public:
             BitGraphVStep(std::vector<std::any> element_ids);
@@ -27,6 +29,8 @@ namespace bitgraph {
             virtual std::optional<size_t> get_limit() { return this->limit; }
 
             inline virtual void add_predicate(std::string key, gremlinxx::P val) { this->predicates.push_back(std::make_pair(key, val)); }
+
+            inline virtual void add_fuzzy(bitgraph::fuzzy_t fuzzy) { this->fuzzies.push_back(fuzzy); }
 
             inline virtual std::vector<std::pair<std::string, gremlinxx::P>> get_predicates() { return this->predicates; }
 
