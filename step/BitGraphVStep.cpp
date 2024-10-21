@@ -9,6 +9,7 @@
 #include "maelstrom/algorithms/intersection.h"
 #include "maelstrom/algorithms/sort.h"
 #include "maelstrom/algorithms/select.h"
+#include "maelstrom/algorithms/topk.h"
 
 #include "maelstrom/util/any_utils.h"
 
@@ -48,7 +49,22 @@ namespace bitgraph {
                         f.embeddings,
                         f.emb_stride
                     );
-                    query_vertices = maelstrom::filter(sim, maelstrom::GREATER_THAN_OR_EQUAL, f.match_threshold);
+
+                    // Have to filter out -inf, nan, etc.
+                    double threshold = f.match_threshold.value_or(std::numeric_limits<double>::min());
+                    query_vertices = std::move(
+                        maelstrom::filter(sim, maelstrom::GREATER_THAN_OR_EQUAL, threshold)
+                    );
+
+                    if(f.count) {
+                        sim = std::move(
+                            maelstrom::select(sim, query_vertices)
+                        );
+                        auto topk_ix = maelstrom::topk(sim, f.count.value());
+                        query_vertices = std::move(maelstrom::select(query_vertices, topk_ix));
+                    } 
+
+                    query_vertices = query_vertices.astype(graph->vertex_dtype);
                     remaining_fuzzies -= 1;
                 }
             } else {
@@ -118,14 +134,35 @@ namespace bitgraph {
                 f.embeddings,
                 f.emb_stride
             );
-            auto q = maelstrom::filter(
-                sim,
-                maelstrom::GREATER_THAN_OR_EQUAL,
-                f.match_threshold
-            );
-            query_vertices = std::move(
-                maelstrom::select(query_vertices, q)
-            );
+
+            maelstrom::vector q;
+            if(f.match_threshold) {
+                auto q = maelstrom::filter(
+                    sim,
+                    maelstrom::GREATER_THAN_OR_EQUAL,
+                    f.match_threshold.value()
+                );
+                query_vertices = std::move(
+                    maelstrom::select(query_vertices, q)
+                );
+            }
+
+            if(f.count) {
+                if(f.match_threshold) {
+                    sim = std::move(
+                        maelstrom::select(sim, q)
+                    );
+                    auto topk_ix = maelstrom::topk(sim, f.count.value());
+                    query_vertices = std::move(
+                        maelstrom::select(query_vertices, topk_ix)
+                    );
+                } else {
+                    auto q = maelstrom::topk(sim, f.count.value());
+                    query_vertices = std::move(
+                        maelstrom::select(query_vertices, q)
+                    );
+                }
+            }
         }
 
         size_t num_traversers = traversers.size();

@@ -238,6 +238,38 @@ namespace bitgraph {
                 );
             }
             if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {
+                this->to_canonical_csc();
+
+                maelstrom::vector current_edges;
+                maelstrom::vector current_origin;
+                std::tie(current_edges, current_origin) = simple_e_adjacency_query(
+                    *this->matrix,
+                    current_vertices,
+                    rel_types
+                );
+
+                if(result_edges.empty()) {
+                    result_edges = std::move(current_edges);
+                    result_origin = std::move(current_origin);
+                } else {
+                    result_edges.insert(result_edges.size(), current_edges);
+                    current_edges.clear();
+
+                    result_origin.insert(result_origin.size(), current_origin);
+                    current_origin.clear();
+                }
+            }
+        } else if(this->matrix->get_format() == maelstrom::CSC) {
+            if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {
+                std::tie(result_edges, result_origin) = simple_e_adjacency_query(
+                    *this->matrix,
+                    current_vertices,
+                    rel_types
+                );
+            }
+            if(direction == gremlinxx::OUT || direction == gremlinxx::BOTH) {
+                this->to_canonical_csr();
+
                 maelstrom::vector current_edges;
                 maelstrom::vector current_origin;
                 std::tie(current_edges, current_origin) = simple_e_adjacency_query(
@@ -281,7 +313,6 @@ namespace bitgraph {
                 this->traverser_storage,
                 current_edges.size()
             );
-            for(size_t k = 0; k < 10; ++k) std::cout << std::any_cast<gremlinxx::Vertex>(result_vertices.get(k)).id << std::endl;
         }
 
         if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {

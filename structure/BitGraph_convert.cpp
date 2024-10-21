@@ -11,10 +11,11 @@ namespace bitgraph {
             // format, so this is a safe operation.
             // In canonical coo format, there should be no values.
 
+            auto raw_edge_dtype = maelstrom::dtype_from_prim_type(this->edge_dtype.prim_type);
             auto values = maelstrom::arange(
                 this->structure_storage,
-                maelstrom::safe_any_cast(this->matrix->num_nonzero(), this->edge_dtype)
-            );
+                maelstrom::safe_any_cast(this->matrix->num_nonzero(), raw_edge_dtype)
+            ).astype(this->edge_dtype);
 
             this->matrix->set_values(std::move(values));
             this->matrix->to_csc();

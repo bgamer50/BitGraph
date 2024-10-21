@@ -227,6 +227,40 @@ namespace bitgraph {
         }
     }
 
+    void BitGraph::set_vertex_embeddings(std::string emb_name, size_t v_start, size_t v_end, maelstrom::vector& embeddings, std::any default_val) {
+        const size_t n_vertices = this->num_vertices();
+        const size_t emb_stride = embeddings.size() / (v_end - v_start + 1);
+
+        if((v_end - v_start + 1) * emb_stride != embeddings.size()) {
+            throw std::runtime_error("range mismatch when setting vertex embeddings");
+        }
+
+        auto p = this->vertex_embeddings.find(emb_name);
+        if(p == this->vertex_embeddings.end()) {
+            this->vertex_embeddings[emb_name] = maelstrom::vector(
+                this->default_property_storage,
+                embeddings.get_dtype(),
+                n_vertices * emb_stride
+            );
+            maelstrom::set(this->vertex_embeddings[emb_name], default_val);
+        }
+
+        auto emb_dtype = embeddings.get_dtype();
+        auto& stored_emb = this->vertex_embeddings[emb_name];
+        
+        auto range_ix = maelstrom::arange(
+            stored_emb.get_mem_type(),
+            v_start * emb_stride,
+            v_start * emb_stride + embeddings.size()
+        );
+
+        maelstrom::assign(
+            stored_emb,
+            range_ix,
+            embeddings
+        );        
+    }
+
     void BitGraph::declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size) {
         if(initial_size == 0) {
             auto n_vertices = this->num_vertices();

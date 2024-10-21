@@ -6,6 +6,10 @@
 #include "maelstrom/algorithms/select.h"
 #include "maelstrom/algorithms/filter.h"
 #include "maelstrom/algorithms/sort.h"
+#include "maelstrom/algorithms/reduce.h"
+#include "maelstrom/algorithms/unique.h"
+#include "maelstrom/algorithms/search_sorted.h"
+#include "maelstrom/algorithms/increment.h"
 
 namespace bitgraph {
 
@@ -201,5 +205,72 @@ namespace bitgraph {
             maelstrom::safe_any_cast(old_size + from_vertices.size(), raw_edge_dtype)
         ).astype(this->edge_dtype);
     }
+
+
+    std::tuple<maelstrom::vector, maelstrom::vector, maelstrom::vector> BitGraph::get_subgraph_coo(maelstrom::vector& subgraph_edges) {
+        this->to_canonical_coo();
+
+        // FIXME set the edge types correctly
+        subgraph_edges = subgraph_edges.astype(this->get_edge_dtype());
+        auto src = this->matrix->get_rows_1d(subgraph_edges).astype(maelstrom::uint64);
+        auto dst = this->matrix->get_cols_1d(subgraph_edges).astype(maelstrom::uint64);
+
+        auto all_vertices = maelstrom::vector(src, false);
+        all_vertices.insert(dst);
+
+        auto unique_ix = maelstrom::unique(all_vertices);
+        auto unique_vertices = maelstrom::select(all_vertices, unique_ix);
+        const size_t num_sg_vertices = unique_vertices.size();
+        const size_t num_sg_edges = subgraph_edges.size();
+        all_vertices.clear();
+
+        src = std::move(maelstrom::search_sorted(unique_vertices, src));
+        dst = std::move(maelstrom::search_sorted(unique_vertices, dst));
+
+        maelstrom::increment(src, maelstrom::DECREMENT);
+        maelstrom::increment(dst, maelstrom::DECREMENT);
+
+        return std::make_tuple(
+            std::move(unique_vertices),
+            std::move(src),
+            std::move(dst)
+        );
+    }
+
+    std::shared_ptr<gremlinxx::Graph> BitGraph::subgraph(maelstrom::vector& subgraph_edges) {
+        auto sg = std::shared_ptr<bitgraph::BitGraph>(new bitgraph::BitGraph(
+            maelstrom::uint64,
+            maelstrom::uint64,
+            maelstrom::DEVICE,
+            maelstrom::DEVICE,
+            maelstrom::DEVICE
+        ));
+
+        maelstrom::vector unique_vertices;
+        maelstrom::vector src;
+        maelstrom::vector dst;
+        std::tie(unique_vertices, src, dst) = this->get_subgraph_coo(subgraph_edges);
+
+        const size_t num_sg_vertices = unique_vertices.size();
+        sg->add_vertices(num_sg_vertices);
+        sg->add_edges(src, dst, "retrieved_edge");
+        
+        auto vix = maelstrom::arange(maelstrom::DEVICE, num_sg_vertices).astype(sg->get_vertex_dtype());
+        sg->set_vertex_properties(
+            "original_id",
+            vix,
+            unique_vertices
+        );
+
+        auto eix = maelstrom::arange(maelstrom::DEVICE, src.size()).astype(sg->get_edge_dtype());
+        sg->set_edge_properties(
+            "original_id",
+            eix,
+            subgraph_edges
+        );
+
+        return std::move(sg);
+    }
+
 
 }

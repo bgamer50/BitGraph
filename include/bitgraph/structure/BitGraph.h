@@ -106,6 +106,7 @@ namespace bitgraph {
 
             using gremlinxx::Graph::set_vertex_embeddings;
             virtual void set_vertex_embeddings(std::string emb_name, maelstrom::vector& vertices, maelstrom::vector& embeddings, std::any default_val=0);
+            virtual void set_vertex_embeddings(std::string emb_name, size_t v_start, size_t v_end, maelstrom::vector& embeddings, std::any default_val=0);
 
             virtual void declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
 
@@ -162,7 +163,9 @@ namespace bitgraph {
 			virtual std::pair<maelstrom::vector, maelstrom::vector> toV(maelstrom::vector& current_edges, gremlinxx::Direction direction);
 
             using gremlinxx::Graph::subgraph;
-            inline virtual std::shared_ptr<gremlinxx::Graph> subgraph(maelstrom::vector& subgraph_edges) { return std::shared_ptr<gremlinxx::Graph>(new bitgraph::BitGraph()); }
+            virtual std::shared_ptr<gremlinxx::Graph> subgraph(maelstrom::vector& subgraph_edges);
+
+            virtual std::tuple<maelstrom::vector, maelstrom::vector, maelstrom::vector> get_subgraph_coo(maelstrom::vector& subgraph_edges);
 
             using gremlinxx::Graph::num_vertices;
             inline virtual size_t num_vertices() { return this->matrix->num_rows(); }

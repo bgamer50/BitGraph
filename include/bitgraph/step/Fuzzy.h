@@ -2,6 +2,7 @@
 
 #include "maelstrom/algorithms/similarity.h"
 #include <string>
+#include <optional>
 
 namespace bitgraph {
 
@@ -9,7 +10,8 @@ namespace bitgraph {
         maelstrom::vector embeddings;
         std::string emb_name;
         size_t emb_stride;
-        double match_threshold;
+        std::optional<double> match_threshold;
+        std::optional<size_t> count;
         maelstrom::similarity_t similarity_metric;
     };
 

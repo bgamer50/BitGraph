@@ -28,6 +28,7 @@ namespace bitgraph {
                             like_step->get_embedding_name(),
                             like_step->get_embedding_stride(),
                             like_step->get_match_threshold(),
+                            like_step->get_count(),
                             like_step->get_metric()
                         });
 
