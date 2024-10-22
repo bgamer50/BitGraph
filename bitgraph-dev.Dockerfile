@@ -2,7 +2,7 @@ FROM nvidia/cuda:12.0.1-devel-ubuntu22.04
 
 RUN apt-get update
 RUN apt-get install -y git python3 python3-pip wget ninja-build mpich libopenmpi-dev openjdk-8-jre-headless
-RUN python3 -m pip install "nanobind>=2.0"
+RUN python3 -m pip install --extra-index-url https://pypi.nvidia.com cudf-cu12 torch cupy-cuda12x numpy pandas transformers torch_geometric gensim datasets sentencepiece protobuf "accelerate>=0.26.0" "nanobind>=2.2"
 
 RUN mkdir /opt/cmake
 
