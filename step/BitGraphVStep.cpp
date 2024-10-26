@@ -16,9 +16,9 @@
 namespace bitgraph {
     bool BITGRAPH_VALIDITY_WARNING = false;
 
-    BitGraphVStep::BitGraphVStep(std::vector<std::any> element_ids)
+    BitGraphVStep::BitGraphVStep(maelstrom::vector element_ids)
     : gremlinxx::TraversalStep(gremlinxx::MAP, BITGRAPH_V_STEP) {
-        this->element_ids = element_ids;
+        this->element_ids = std::move(element_ids);
     }
 
     void BitGraphVStep::apply(gremlinxx::GraphTraversal* trv, gremlinxx::traversal::TraverserSet& traversers) {
@@ -115,7 +115,7 @@ namespace bitgraph {
                 query_vertices.resize(std::min(query_vertices.size(), this->limit.value_or(query_vertices.size())));
             }
         } else {
-            query_vertices = maelstrom::make_vector_from_anys(graph->traverser_storage, this->element_ids).astype(graph->vertex_dtype);
+            query_vertices = this->element_ids.astype(graph->vertex_dtype);
             
             // TODO properly check if vertices are valid.
             if(!BITGRAPH_VALIDITY_WARNING) {

@@ -21,11 +21,13 @@ data/gplus.txt
 data/temporal
 data/patents
 data/ogb
+data/rag
 CMakeFiles/
 CMakeCache.txt
 *.cmake
 *.ninja_deps
 *.ninja_log
 *.ninja
+*.pt
 .vscode/
 bin/

@@ -11,13 +11,13 @@ namespace bitgraph {
 
     class BitGraphVStep : public gremlinxx::TraversalStep, public gremlinxx::LimitSupportingStep {
         private:
-            std::vector<std::any> element_ids;
+            maelstrom::vector element_ids;
             std::optional<size_t> limit = {};
             std::vector<std::pair<std::string, gremlinxx::P>> predicates;
             std::vector<fuzzy_t> fuzzies;
 
         public:
-            BitGraphVStep(std::vector<std::any> element_ids);
+            BitGraphVStep(maelstrom::vector element_ids);
 
             using gremlinxx::TraversalStep::apply;
             virtual void apply(gremlinxx::GraphTraversal* trv, gremlinxx::traversal::TraverserSet& traversers);
