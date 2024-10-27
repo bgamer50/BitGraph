@@ -1,4 +1,5 @@
 #include "bitgraph/structure/BitGraph.h"
+#include "bitgraph/structure/Index.h"
 #include "bitgraph/step/BitGraphVStep.h"
 
 #include "maelstrom/algorithms/arange.h"
@@ -41,28 +42,50 @@ namespace bitgraph {
                     if(emb == graph->vertex_embeddings.end()) {
                         throw std::invalid_argument("No embedding with the given name exists!");
                     }
-                    maelstrom::vector empty;
-                    auto sim = maelstrom::similarity(
-                        f.similarity_metric,
-                        emb->second,
-                        empty,
-                        f.embeddings,
-                        f.emb_stride
-                    );
 
-                    // Have to filter out -inf, nan, etc.
-                    double threshold = f.match_threshold.value_or(std::numeric_limits<double>::min());
-                    query_vertices = std::move(
-                        maelstrom::filter(sim, maelstrom::GREATER_THAN_OR_EQUAL, threshold)
-                    );
+                    auto emb_index = graph->embedding_indices.find(f.emb_name);
+                    bool has_index = (emb_index != graph->embedding_indices.end());
 
-                    if(f.count) {
-                        sim = std::move(
-                            maelstrom::select(sim, query_vertices)
+                    if(f.count && f.count.value() == 0) {
+                        // do nothing
+                    } else if(has_index && !f.match_threshold && f.count) {
+                        std::cout << "getting query vertices from index" << std::endl;
+                        query_vertices = std::move(
+                            bitgraph::search_embedding_index_knn(
+                                emb->second,
+                                emb_index->second,
+                                f.embeddings,
+                                f.emb_stride,
+                                f.count.value()
+                            )
                         );
-                        auto topk_ix = maelstrom::topk(sim, f.count.value());
-                        query_vertices = std::move(maelstrom::select(query_vertices, topk_ix));
-                    } 
+                        query_vertices = std::move(
+                            query_vertices.to(graph->traverser_storage)
+                        );
+                    } else {
+                        maelstrom::vector empty;
+                        auto sim = maelstrom::similarity(
+                            f.similarity_metric,
+                            emb->second,
+                            empty,
+                            f.embeddings,
+                            f.emb_stride
+                        );
+
+                        // Have to filter out -inf, nan, etc.
+                        double threshold = f.match_threshold.value_or(std::numeric_limits<double>::min());
+                        query_vertices = std::move(
+                            maelstrom::filter(sim, maelstrom::GREATER_THAN_OR_EQUAL, threshold)
+                        );
+
+                        if(f.count) {
+                            sim = std::move(
+                                maelstrom::select(sim, query_vertices)
+                            );
+                            auto topk_ix = maelstrom::topk(sim, f.count.value());
+                            query_vertices = std::move(maelstrom::select(query_vertices, topk_ix));
+                        } 
+                    }
 
                     query_vertices = query_vertices.astype(graph->vertex_dtype);
                     remaining_fuzzies -= 1;

@@ -1,11 +1,11 @@
 {
     "param_distributions": {
-        "entity_vertex_match_limit": [2],
-        "question_vertex_match_limit": [0],
-        "hop_0_outgoing_limit": [8],
-        "hop_1_outgoing_limit": [5],
-        "hop_0_incoming_limit": [8],
-        "hop_1_incoming_limit": [8]
+        "entity_vertex_match_limit": [1, 2],
+        "question_vertex_match_limit": [0, 1],
+        "hop_0_outgoing_limit": [9, 5, 3, 2],
+        "hop_1_outgoing_limit": [5, 4, 3],
+        "hop_0_incoming_limit": [8, 5, 4],
+        "hop_1_incoming_limit": [8, 5, 4]
     },
-    "n_iter": 1
+    "n_iter": 16
 }

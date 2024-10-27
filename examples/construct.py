@@ -107,7 +107,7 @@ def read_wiki_data(fname, skip_empty=True):
     return eix, df.title.to_pandas(), sentences.to_pandas()
 
 
-def read_embeddings(graph, directory, td):
+def read_embeddings(graph, directory, td, map_location='cuda'):
     ex = re.compile(r'part_([0-9]+)\_([0-9]+).pt')
     def fname_to_key(s):
         m = ex.match(s)
@@ -121,7 +121,9 @@ def read_embeddings(graph, directory, td):
 
         files = sorted(files, key=fname_to_key)
         for f in files:
-            e = torch.load(os.path.join(path, f), weights_only=True, map_location='cuda').reshape((-1, td))
+            e = torch.load(os.path.join(path, f), weights_only=True, map_location=map_location).reshape((-1, td))
+            if map_location == 'cpu':
+                e = e.pin_memory()
 
             print(ix, e.shape)
             graph.set_vertex_embeddings('emb', ix, ix + e.shape[0] - 1, e)
@@ -129,13 +131,14 @@ def read_embeddings(graph, directory, td):
             ix += e.shape[0]
             del e
 
+    graph.make_vertex_embedding_index('emb')
 
 def getem_roberta(model, tokenizer, text):
     t = tokenizer(text, return_tensors='pt')
     while t.input_ids.shape[1] > 512:
         a = a[:-10]
         t = tokenizer(a, return_tensors='pt')
-    return model(t.input_ids, t.attention_mask)
+    return model(t.input_ids.cuda(), t.attention_mask.cuda())
 
 
 def getem_w2v(model, text):
@@ -153,9 +156,13 @@ def extract(entsList):
 
 
 def get_question_vertices(g, f, ner, question, e_limit, q_limit):
+    start_time = perf_counter()
     ents = ner(question)
     emb_q = f(question)
     ent_embs = [f(ent['word']) for ent in ents]
+    end_time = perf_counter()
+
+    print('ner time:', end_time - start_time)
 
     ent_vids = [
         g.V().like('emb', [ent_emb], e_limit).toArray()
@@ -169,6 +176,8 @@ def get_question_vertices(g, f, ner, question, e_limit, q_limit):
             g.V().like('emb', [emb_q], q_limit).toArray()
         ]
     )
+    vids = torch.as_tensor(vids).cuda()
+    vids = cupy.asarray(vids)
 
     print(ents)
     return vids, emb_q
@@ -559,19 +568,22 @@ if __name__ == '__main__':
             'int64',
             'int64',
             'DEVICE',
-            'DEVICE',
             args.property_storage.upper(),
+            'DEVICE',
         )
 
         graph.add_vertices(eix.max() + 1)
         graph.add_edges(eix[0], eix[1], 'link')
 
+        start_time_emb = perf_counter()
         read_embeddings(
             graph,
             args.embeddings_dir,
             td=300 if args.embedding_type == 'w2v' else 1024,
+            map_location='cpu' if args.property_storage.upper() in ['PINNED', 'HOST'] else 'cuda'
         )    
-        print('read embeddings into graph')
+        end_time_emb = perf_counter()
+        print(f'read embeddings into graph and built index, took {end_time_emb - start_time_emb} seconds')
         
         g = graph.traversal()
         print('constructed graph')
