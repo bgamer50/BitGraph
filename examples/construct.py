@@ -641,9 +641,15 @@ if __name__ == '__main__':
 
     truth_df = pandas.read_json(args.truth_fname)
     if args.train_size:
-        truth_df = truth_df.iloc[
-            torch.randperm(len(truth_df), generator=gen_cpu)[:args.train_size]
-        ]
+        perm = torch.randperm(len(truth_df), generator=gen_cpu)
+        if args.stage == 'test':
+            truth_df = truth_df.iloc[
+                perm[args.train_size:2*args.train_size]
+            ]
+        else:
+            truth_df = truth_df.iloc[
+                perm[:args.train_size]
+            ]
 
     supporting_facts = truth_df.supporting_facts
     contexts = truth_df.context
