@@ -134,15 +134,17 @@ def read_embeddings(graph, directory, td, map_location='cuda'):
     graph.make_vertex_embedding_index('emb')
 
 def getem_roberta(model, tokenizer, text):
-    t = tokenizer(text, return_tensors='pt')
-    while t.input_ids.shape[1] > 512:
-        a = a[:-10]
-        t = tokenizer(a, return_tensors='pt')
-    return model(t.input_ids.cuda(), t.attention_mask.cuda())
+    with torch.no_grad():
+        t = tokenizer(text, return_tensors='pt')
+        while t.input_ids.shape[1] > 512:
+            a = a[:-10]
+            t = tokenizer(a, return_tensors='pt')
+        return model(t.input_ids.cuda(), t.attention_mask.cuda())
 
 
 def getem_w2v(model, text):
-    return model(text)
+    with torch.no_grad():
+        return model(text)
 
 
 def extract(entsList):
@@ -219,7 +221,7 @@ def tune_query(g, f, ner, questions, contexts, grid, out_fname):
                 print('query time:', end_time_query - start_time_query)
 
                 start_time_cmp = perf_counter()
-                v_emb = torch.as_tensor(v_emb, device='cpu')
+                v_emb = torch.as_tensor(v_emb, device='cpu').detach()
                 num_vertices = v_emb.shape[0]
                 v_emb = v_emb.sum(0) / v_emb.shape[0]
                 
@@ -307,10 +309,14 @@ def coo_to_data(g, coo):
         torch.as_tensor(coo['src'].astype('int64'), device='cuda'),
     ])
     
-    data.x = torch.as_tensor(
+    x = torch.as_tensor(
         g.V(coo['vid']).encode('emb').toArray(),
         device='cuda'
-    ).reshape((-1, 300))
+    )
+    
+    td = x.numel() // len(coo['vid'])
+    print('td:', td)
+    data.x = x.reshape((-1, td))
     
     data.n_id = torch.as_tensor(
         coo['vid'],
@@ -322,17 +328,18 @@ def coo_to_data(g, coo):
     return data
 
 
-def get_prompt(ner, g, f, qp, titles, sentences, question, direct=True):
-    vids_q, emb_q = get_question_vertices(
-        g,
-        f,
-        ner,
-        question,
-        qp['entity_vertex_match_limit'],
-        qp['question_vertex_match_limit']
-    )
+def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
+    if rag_type in ['direct', 'combined']:
+        vids_q, emb_q = get_question_vertices(
+            g,
+            f,
+            ner,
+            question,
+            qp['entity_vertex_match_limit'],
+            qp['question_vertex_match_limit']
+        )
 
-    if direct:
+    if rag_type == 'direct':
         vids = g.V(vids_q)._as('s')._union([
             __().out().order().by(__().similarity('emb', [emb_q])).limit(qp['hop_0_outgoing_limit'])._as('h0'),
             __()._in().order().by(__().similarity('emb', [emb_q])).limit(qp['hop_0_incoming_limit'])._as('h0'),
@@ -352,7 +359,7 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, direct=True):
         context = '\n'.join([f'{t} - {p}' for t, p in s.items()])
         prompt = f'Question: Given the information below, {question}\n{context}\nAnswer:'
         return (prompt, None)
-    else:
+    elif rag_type == 'combined':
         eids = g.V(vids_q)._union([
             __().outE().order().by(__().inV().similarity('emb', [emb_q])).limit(qp['hop_0_outgoing_limit'])._as('h0').inV(),
             __().inE().order().by(__().outV().similarity('emb', [emb_q])).limit(qp['hop_0_incoming_limit'])._as('h0').outV(),
@@ -366,19 +373,24 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, direct=True):
         
         prompt = f'Question: {question}\nAnswer:'
         return (prompt, data)
+    elif rag_type == 'none':
+        prompt = f'Question: {question}\nAnswer:'
+        return (prompt, None)
+    else:
+        raise ValueError("Invalid rag type")
 
 
-def test(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, lr=1e-5, direct=True):
+def test(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, lr=1e-5, rag_type='direct'):
     model.eval()
     with torch.no_grad():
         for i in range(len(questions)):            
             question = questions.iloc[i]
             answer = answers.iloc[i]
             
-            prompt, data = get_prompt(ner, g, f, qp, titles, sentences, question, direct=direct)
+            prompt, data = get_prompt(ner, g, f, qp, titles, sentences, question, rag_type=rag_type)
             print(f'Prompt {i}: {prompt} {answer}')
 
-            if direct:
+            if rag_type in ['direct', 'none']:
                 loss = model(
                     [prompt],
                     [answer],
@@ -402,7 +414,7 @@ def test(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, 
         print(f'Test Loss: {test_loss:4f}')
 
 
-def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, lr=1e-5, direct=True):
+def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, lr=1e-5, rag_type='direct'):
     optimizer = get_optimizer(model, lr)
     grad_steps = 2
 
@@ -415,10 +427,10 @@ def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1,
             question = questions.iloc[i]
             answer = answers.iloc[i]
 
-            prompt, data = get_prompt(ner, g, f, qp, titles, sentences, question, direct=direct)
+            prompt, data = get_prompt(ner, g, f, qp, titles, sentences, question, rag_type)
             print(f'Prompt {i}: {prompt} {answer}')
 
-            if direct:
+            if rag_type in ['direct', 'none']:
                 loss = model(
                     [prompt],
                     [answer],
@@ -457,7 +469,7 @@ def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1,
         print(f'Epoch {epoch}, Train Loss: {train_loss:4f}')
 
         print('Saving model...')
-        fname = 'llm_direct_tuned.pt' if direct else 'gnn_llm_tuned.pt'
+        fname = 'llm_direct_tuned.pt' if rag_type == 'direct' else 'gnn_llm_tuned.pt'
         save_params_dict(model, fname)
         print('Model saved successfully.')
 
@@ -551,6 +563,7 @@ if __name__ == '__main__':
     parser.add_argument('--gnn_hidden_channels', type=int, required=False, default=1024)
     parser.add_argument('--gnn_num_layers', type=int, required=False, default=4)
     parser.add_argument('--lr', type=float, required=False, default=1e-5)
+    parser.add_argument('--mlp_out_channels', type=int, required=False, default=2048) # 3200 for open_llama_3b_v2
 
     args = parser.parse_args()
 
@@ -661,22 +674,22 @@ if __name__ == '__main__':
             query_grid = json.load(qf)
             query_grid.update({'random_state':args.seed})
         
-        tune_query(
-            g,
-            getem,
-            load_ner(args.ner_model),
-            questions,
-            supporting_facts, 
-            query_grid,
-            args.query_file
-        )
+        with torch.no_grad():
+            tune_query(
+                g,
+                getem,
+                load_ner(args.ner_model),
+                questions,
+                supporting_facts, 
+                query_grid,
+                args.query_file
+            )
         exit()
     elif args.stage in ['train', 'test']:
         if not args.query_file:
             raise ValueError("Must provide query file if training with combined RAG")
 
-        # model, ner, g, qp, titles, sentences, questions, answers, epochs=1, lr=1e-5, direct=True
-        direct = (args.rag_type == 'direct')
+        no_graph = (args.rag_type in ['direct', 'none'])
         
         llm = LLM(model_name=args.llm_model, num_params=args.llm_mparams)
         if args.llm_params:
@@ -684,7 +697,7 @@ if __name__ == '__main__':
         else:
             warnings.warn("Fine tuning the LLM is recommended.")
 
-        if direct:
+        if no_graph:
             model = llm
         else:
             gnn = GAT(
@@ -696,7 +709,7 @@ if __name__ == '__main__':
             )
             if args.gnn_params:
                 load_params_dict(gnn, args.gnn_params)
-            model = GRetriever(llm=llm, gnn=gnn, mlp_out_channels=2048)
+            model = GRetriever(llm=llm, gnn=gnn, mlp_out_channels=args.mlp_out_channels)
         
         queries = pandas.read_json(args.query_file, lines=True)
         qp = queries.sort_values('avg_error').params.iloc[0]
@@ -714,7 +727,7 @@ if __name__ == '__main__':
             answers,
             args.num_epochs,
             args.lr,
-            direct
+            args.rag_type
         )
     elif args.stage == 'visualize':
         import networkx as nx
@@ -744,7 +757,7 @@ if __name__ == '__main__':
             question = questions.iloc[i]
             answer = answers.iloc[i]
 
-            prompt, data = get_prompt(ner, g, getem, qp, titles, sentences, question, direct=False)
+            prompt, data = get_prompt(ner, g, getem, qp, titles, sentences, question, rag_type='combined')
             eix = np.asarray(data.edge_index.cpu()).T
 
             names, types = decode(data.n_id)

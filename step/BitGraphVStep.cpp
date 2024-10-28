@@ -49,7 +49,6 @@ namespace bitgraph {
                     if(f.count && f.count.value() == 0) {
                         // do nothing
                     } else if(has_index && !f.match_threshold && f.count) {
-                        std::cout << "getting query vertices from index" << std::endl;
                         query_vertices = std::move(
                             bitgraph::search_embedding_index_knn(
                                 emb->second,
@@ -60,7 +59,7 @@ namespace bitgraph {
                             )
                         );
                         query_vertices = std::move(
-                            query_vertices.to(graph->traverser_storage)
+                            query_vertices.astype(graph->vertex_dtype).to(graph->traverser_storage)
                         );
                     } else {
                         maelstrom::vector empty;
