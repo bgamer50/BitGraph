@@ -23,6 +23,7 @@ data/temporal
 data/patents
 data/ogb
 data/rag
+examples/logs/
 CMakeFiles/
 CMakeCache.txt
 *.cmake
