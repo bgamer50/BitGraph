@@ -35,21 +35,24 @@ namespace bitgraph {
         // TODO fix memory leak
         auto* res = new faiss::gpu::StandardGpuResources();
         int ncentroids = static_cast<int>(4 * sqrt(this->num_vertices()));
-        int m = static_cast<int>(td/256);
+        int m = static_cast<int>(td/16);
         if(m <= 1) m = 2;
         int mod = td % m;
         if(mod != 0) {
             m += mod;
         }
         
+        faiss::gpu::GpuIndexIVFPQConfig config;
+        config.useFloat16LookupTables = true;
+
         auto* vecs = new faiss::gpu::GpuIndexFlatL2(res, td);
 
-        this->embedding_indices[emb_name] = std::make_shared<faiss::gpu::GpuIndexIVFPQ>(res, vecs, td, ncentroids, m, 8);
+        this->embedding_indices[emb_name] = std::make_shared<faiss::gpu::GpuIndexIVFPQ>(res, vecs, td, ncentroids, m, 8, faiss::METRIC_L2, config);
 
         std::cout << "training embedding index (this may take a while)..." << std::endl;
 
         std::any_cast<std::shared_ptr<faiss::gpu::GpuIndexIVFPQ>>(this->embedding_indices[emb_name])->train(
-            this->num_vertices() / 32,
+            this->num_vertices(),
             static_cast<float*>(stored_emb.data())
         );
 
@@ -75,6 +78,7 @@ namespace bitgraph {
         float* query_h = new float[query.size()];
         cudaMemcpy(query_h, query.data(), query.size() * sizeof(float), cudaMemcpyDefault);
 
+        index->nprobe = 4;
         index->search(
             num_queries,
             query_h,
@@ -82,6 +86,7 @@ namespace bitgraph {
             D,
             I
         );
+        index->nprobe = 1;
 
         delete query_h;
 

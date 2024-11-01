@@ -251,7 +251,7 @@ def tune_query(g, f, ner, questions, contexts, grid, out_fname):
 def adjust_learning_rate(param_group, LR, epoch, num_epochs):
     # Decay the learning rate with half-cycle cosine after warmup
     # Adapted from the PyG G-Retriever Implementation
-    # (credit: PyG team, Rishi Puri)
+    # (credit: PyG team, Rishi Puri, Xiaoxin He)
     min_lr = 5e-6
     warmup_epochs = 1
     if epoch < warmup_epochs:
@@ -290,7 +290,7 @@ def get_optimizer(model, lr):
     params = [p for _, p in model.named_parameters() if p.requires_grad]
 
     # This configuration is adapted from the PyG G-Retriever Implementation
-    # (credit: PyG team, Rishi Puri)
+    # (credit: PyG team, Rishi Puri, Xiaoxin He)
     optimizer = torch.optim.AdamW([
         {
             'params': params,
@@ -330,6 +330,7 @@ def coo_to_data(g, coo):
 
 def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
     if rag_type in ['direct', 'combined']:
+        start_time = perf_counter()
         vids_q, emb_q = get_question_vertices(
             g,
             f,
@@ -338,6 +339,8 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
             qp['entity_vertex_match_limit'],
             qp['question_vertex_match_limit']
         )
+        end_time = perf_counter()
+        print(f'Get question vertices time: {end_time - start_time} s')
 
     if rag_type == 'direct':
         vids = g.V(vids_q)._as('s')._union([
@@ -352,7 +355,7 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
         ix = vids[~fx].get() - len(titles)
 
         s = {
-            titles.iloc[k]: (' '.join(sentences.sentences[v].tolist()))
+            titles.iloc[k]: (' '.join(sentences.sentences[v].fillna('').tolist()))
             for k, v in sentences.iloc[ix].groupby('article').groups.items()
         }
 
@@ -383,6 +386,7 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
 def test(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, lr=1e-5, rag_type='direct'):
     model.eval()
     with torch.no_grad():
+        total_loss = 0.0
         for i in range(len(questions)):            
             question = questions.iloc[i]
             answer = answers.iloc[i]
@@ -469,7 +473,7 @@ def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1,
         print(f'Epoch {epoch}, Train Loss: {train_loss:4f}')
 
         print('Saving model...')
-        fname = 'llm_direct_tuned.pt' if rag_type == 'direct' else 'gnn_llm_tuned.pt'
+        fname = 'llm_direct_trained.pt' if rag_type == 'direct' else 'gnn_llm_trained.pt'
         save_params_dict(model, fname)
         print('Model saved successfully.')
 
@@ -501,10 +505,10 @@ def tune_llm(llm, questions, contexts, answers, epochs=1, lr=1e-5):
                 None,
             )
 
-            response = llm.inference(
-                [prompt]
-            )
-            print(f'Answer {i}: {response}')
+            #response = llm.inference(
+            #    [prompt]
+            #)
+            #print(f'Answer {i}: {response}')
 
             print(f'loss {i}: {loss}')
             loss.backward()
@@ -528,7 +532,7 @@ def tune_llm(llm, questions, contexts, answers, epochs=1, lr=1e-5):
         print(f'Epoch {epoch}, Train Loss: {train_loss:4f}')
 
         print('Saving model...')
-        fname = 'llm_direct_tuned.pt' if contexts is None else 'llm_tuned.pt'
+        fname = 'llm_tuned.pt' if contexts is None else 'llm_direct_tuned.pt'
         save_params_dict(llm, fname)
         print('Model saved successfully.')
 
@@ -552,12 +556,14 @@ if __name__ == '__main__':
     parser.add_argument('--query_file', required=False, type=str)
     parser.add_argument('--query_search_file', required=False, type=str)
     parser.add_argument('--train_size', required=False, type=int)
+    parser.add_argument('--test_size', required=False, type=int)
     parser.add_argument('--seed', type=int, required=False, default=62)
     parser.add_argument('--ner_model', type=str, required=False, default="dslim/bert-large-NER")
     parser.add_argument('--llm_model', type=str, required=False, default='TinyLlama/TinyLlama-1.1B-Chat-v0.1')
     parser.add_argument('--llm_mparams', type=int, required=False, default=1)
     parser.add_argument('--gnn_params', type=str, required=False)
     parser.add_argument('--llm_params', type=str, required=False)
+    parser.add_argument('--gnn_llm_params', type=str, required=False)
     parser.add_argument('--rag_type', type=str, required=False, default='direct')
     parser.add_argument('--num_epochs', type=int, required=False, default=1)
     parser.add_argument('--gnn_hidden_channels', type=int, required=False, default=1024)
@@ -643,9 +649,14 @@ if __name__ == '__main__':
     if args.train_size:
         perm = torch.randperm(len(truth_df), generator=gen_cpu)
         if args.stage == 'test':
-            truth_df = truth_df.iloc[
-                perm[args.train_size:2*args.train_size]
-            ]
+            if args.test_size:
+                truth_df = truth_df.iloc[
+                    perm[args.train_size:(args.train_size + args.test_size)]
+                ]
+            else:
+                truth_df = truth_df.iloc[
+                    perm[args.train_size:2*args.train_size]
+                ]
         else:
             truth_df = truth_df.iloc[
                 perm[:args.train_size]
@@ -716,6 +727,8 @@ if __name__ == '__main__':
             if args.gnn_params:
                 load_params_dict(gnn, args.gnn_params)
             model = GRetriever(llm=llm, gnn=gnn, mlp_out_channels=args.mlp_out_channels)
+            if args.gnn_llm_params:
+                load_params_dict(model, args.gnn_llm_params)
         
         queries = pandas.read_json(args.query_file, lines=True)
         qp = queries.sort_values('avg_error').params.iloc[0]
