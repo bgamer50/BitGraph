@@ -241,6 +241,9 @@ NB_MODULE(pybitgraph, m) {
                 );
             }
         )
+        .def("make_vertex_embedding_index",
+            &bitgraph::BitGraph::make_vertex_embedding_index
+        )
         .def("set_vertex_properties",
             [](
                 bitgraph::BitGraph& bg,

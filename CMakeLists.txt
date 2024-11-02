@@ -25,6 +25,7 @@ add_library(
     structure/BitGraph_access.cpp
     structure/BitGraph_convert.cpp
     structure/BitGraph_query.cpp
+    structure/BitGraph_index.cu
 
     traversal/BitGraphTraversalSource.cpp
 
@@ -50,6 +51,7 @@ target_include_directories(
         "include/" # bitgraph path
         "../gremlin++" # gremlinxx path
         "../maelstrom/include" # maelstrom path
+        "../faiss" # faiss path
 )
 
 function(AddBitGraphExec EXEC_NAME)
@@ -67,6 +69,7 @@ function(AddBitGraphExec EXEC_NAME)
         PRIVATE
           "../maelstrom/" 
           "../gremlin++/"
+          "../faiss/build/faiss"
      )
 
     target_link_libraries(
@@ -75,6 +78,7 @@ function(AddBitGraphExec EXEC_NAME)
             bitgraph   
             gremlinxx
             maelstrom
+            faiss
     )
 
 endfunction()
@@ -106,6 +110,7 @@ function(AddBitGraphTest EXEC_NAME)
        PRIVATE
          "../maelstrom/" 
          "../gremlin++/"
+         "../faiss/build/faiss"
     )
 
     target_link_libraries(
@@ -114,6 +119,7 @@ function(AddBitGraphTest EXEC_NAME)
             bitgraph
             gremlinxx
             maelstrom
+            faiss
     )
 
 endfunction()
@@ -141,10 +147,12 @@ target_link_libraries(
         bitgraph 
         gremlinxx 
         maelstrom
+        faiss
 )
 target_link_directories(
        pybitgraph
        PRIVATE
          "../maelstrom/" 
          "../gremlin++/"
+         "../faiss/build/faiss"
 )

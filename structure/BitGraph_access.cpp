@@ -242,7 +242,9 @@ namespace bitgraph {
                 embeddings.get_dtype(),
                 n_vertices * emb_stride
             );
+            std::cout << "created embedding" << std::endl;
             maelstrom::set(this->vertex_embeddings[emb_name], default_val);
+            std::cout << "set values" << std::endl;
         }
 
         auto emb_dtype = embeddings.get_dtype();

@@ -48,6 +48,7 @@ namespace bitgraph {
 
             // Embeddings
             std::unordered_map<std::string, maelstrom::vector> vertex_embeddings;
+            std::unordered_map<std::string, std::any> embedding_indices;
 
             // String index
             maelstrom::string_index<uint64_t> string_index{BITGRAPH_INVALID_STRING, std::numeric_limits<uint64_t>::max()};
@@ -111,6 +112,8 @@ namespace bitgraph {
             virtual void declare_vertex_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
 
             virtual void declare_edge_property(std::string property_name, maelstrom::storage mem_type, maelstrom::dtype_t dtype, size_t initial_size=0);
+
+            virtual void make_vertex_embedding_index(std::string emb_name);
 
             virtual std::pair<std::optional<maelstrom::vector>, std::optional<maelstrom::vector>> view_vertex_property(std::string property_name, bool view_keys=true, bool view_values=true);
 
