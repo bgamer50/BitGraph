@@ -10,6 +10,7 @@ test/test.*
 *.out
 *.stats
 *.xml
+*.graphml
 prof.txt
 gprof.txt
 *.nsys-rep
