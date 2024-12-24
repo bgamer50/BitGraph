@@ -51,6 +51,7 @@ from transformers import (
 torch.set_float32_matmul_precision('high')
 
 def read_wiki_data(fname, skip_empty=True):
+    print('fname:', fname)
     df = cudf.read_json(fname, lines=True)
 
     mentions = df.mentions.explode()
@@ -361,7 +362,7 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
 
         context = '\n'.join([f'{t} - {p}' for t, p in s.items()])
         prompt = f'Question: Given the information below, {question}\n{context}\nAnswer:'
-        return (prompt, None)
+        return (prompt, None, None)
     elif rag_type == 'combined':
         eids = g.V(vids_q)._union([
             __().outE().order().by(__().inV().similarity('emb', [emb_q])).limit(qp['hop_0_outgoing_limit'])._as('h0').inV(),
@@ -374,8 +375,25 @@ def get_prompt(ner, g, f, qp, titles, sentences, question, rag_type='direct'):
         out = graph.subgraph_coo(eids)
         data = coo_to_data(g, out)
         
+        names = []
+        for v in np.asarray(data.n_id.cpu()).tolist():
+            if v < len(titles):
+                names.append(str(titles.iloc[v]))
+            else:
+                names.append(str(sentences.sentences.iloc[v - len(titles)]))
+        
+        names = np.array(names)
+        vertices = pandas.Series(names, name='nodes')
+
+        edges = pandas.DataFrame({
+            'sources': names[data.edge_index[1].cpu().tolist()],
+            'destinations': names[data.edge_index[0].cpu().tolist()],
+        })
+
+        context = vertices.to_csv(index=False) + '\n' + edges.to_csv(index=False)
+
         prompt = f'Question: {question}\nAnswer:'
-        return (prompt, data)
+        return (prompt, data, context)
     elif rag_type == 'none':
         prompt = f'Question: {question}\nAnswer:'
         return (prompt, None)
@@ -391,7 +409,7 @@ def test(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, 
             question = questions.iloc[i]
             answer = answers.iloc[i]
             
-            prompt, data = get_prompt(ner, g, f, qp, titles, sentences, question, rag_type=rag_type)
+            prompt, data, ctx = get_prompt(ner, g, f, qp, titles, sentences, question, rag_type=rag_type)
             print(f'Prompt {i}: {prompt} {answer}')
 
             if rag_type in ['direct', 'none']:
@@ -408,7 +426,7 @@ def test(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1, 
                     batch=data.batch,
                     label=[answer],
                     edge_attr=None,
-                    additional_text_context=None,
+                    additional_text_context=[ctx],
                 )
 
             print(f'loss {i}: {loss}')
@@ -431,7 +449,7 @@ def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1,
             question = questions.iloc[i]
             answer = answers.iloc[i]
 
-            prompt, data = get_prompt(ner, g, f, qp, titles, sentences, question, rag_type)
+            prompt, data, ctx = get_prompt(ner, g, f, qp, titles, sentences, question, rag_type)
             print(f'Prompt {i}: {prompt} {answer}')
 
             if rag_type in ['direct', 'none']:
@@ -441,6 +459,7 @@ def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1,
                     None,
                 )
             else:
+                print('ctx:', ctx)
                 loss = model(
                     question=[prompt],
                     x=data.x,
@@ -448,7 +467,7 @@ def train(model, ner, g, f, qp, titles, sentences, questions, answers, epochs=1,
                     batch=data.batch,
                     label=[answer],
                     edge_attr=None,
-                    additional_text_context=None,
+                    additional_text_context=[ctx],
                 )
 
             print(f'loss {i}: {loss}')
@@ -776,7 +795,7 @@ if __name__ == '__main__':
             question = questions.iloc[i]
             answer = answers.iloc[i]
 
-            prompt, data = get_prompt(ner, g, getem, qp, titles, sentences, question, rag_type='combined')
+            prompt, data, _ = get_prompt(ner, g, getem, qp, titles, sentences, question, rag_type='combined')
             eix = np.asarray(data.edge_index.cpu()).T
 
             names, types = decode(data.n_id)
