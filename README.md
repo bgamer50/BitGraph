@@ -1,6 +1,7 @@
-Version 1.0.3 (Expected June 2024)
+Version 1.1.0 (December 2024)
 
 This release of BitGraph adds Python bindings and supports new features in Gremlin++, including better traversal strategies and optimizations.
+It also adds FAISS integration, and new examples which demonstrate QRAG, a query-based GraphRAG implementation.
 
 ---------------------------------------------------------------
 
