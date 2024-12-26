@@ -1,0 +1,11 @@
+{
+    "param_distributions": {
+        "entity_vertex_match_limit": [1,2],
+        "question_vertex_match_limit": [0],
+        "hop_0_outgoing_limit": [12, 18],
+        "hop_1_outgoing_limit": [8, 12],
+        "hop_0_incoming_limit": [12, 18],
+        "hop_1_incoming_limit": [4, 8, 12]
+    },
+    "n_iter": 1
+}

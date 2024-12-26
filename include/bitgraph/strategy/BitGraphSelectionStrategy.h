@@ -7,6 +7,6 @@
 
 namespace bitgraph {
 
-    extern gremlinxx::TraversalStrategy BitGraphStrategy;
+    extern gremlinxx::TraversalStrategy BitGraphSelectionStrategy;
 
 }

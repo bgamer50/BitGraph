@@ -1,6 +1,10 @@
 #include "bitgraph/structure/BitGraph.h"
 
 #include "maelstrom/algorithms/arange.h"
+#include "maelstrom/algorithms/reduce_by_key.h"
+#include "maelstrom/algorithms/set.h"
+#include "maelstrom/algorithms/sort.h"
+#include "maelstrom/algorithms/select.h"
 #include "maelstrom/util/any_utils.h"
 
 namespace bitgraph {
@@ -19,6 +23,84 @@ namespace bitgraph {
         return std::make_pair(
             std::move(output_vertices),
             std::move(output_origin)
+        );
+    }
+
+    std::pair<maelstrom::vector, maelstrom::vector> BitGraph::degree(maelstrom::vector& current_vertices, std::vector<std::string>& labels, gremlinxx::Direction direction) {
+        std::vector<std::any> any_rels;
+        any_rels.reserve(labels.size());
+        any_rels.insert(any_rels.end(), labels.begin(), labels.end());
+        maelstrom::vector rel_types = maelstrom::make_vector_from_anys(
+            this->structure_storage,
+            this->edge_label_index.get_dtype(),
+            any_rels
+        );
+
+        if(this->matrix->get_format() == maelstrom::COO) {
+            if(direction == gremlinxx::OUT || direction == gremlinxx::BOTH) {
+                this->to_canonical_csr();
+            } else {
+                this->to_canonical_csc();
+            }
+        }
+
+        maelstrom::vector ix;
+        maelstrom::vector counts;
+        if(this->matrix->get_format() == maelstrom::CSR) {
+            if(direction == gremlinxx::OUT || direction == gremlinxx::BOTH) {
+                std::tie(ix, counts) = this->matrix->nnz_i(current_vertices, rel_types);
+            }
+            if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {
+                this->to_canonical_csc();
+                maelstrom::vector ix_r;
+                maelstrom::vector counts_r;
+                std::tie(ix_r, counts_r) = this->matrix->nnz_i(current_vertices, rel_types);
+                if(ix.empty()) {
+                    ix = std::move(ix_r);
+                    counts = std::move(counts_r);
+                } else {
+                    ix.insert(ix_r);
+                    counts.insert(counts_r);
+                    ix_r.clear();
+                    counts_r.clear();
+                    
+                    auto six = maelstrom::sort(ix);
+                    counts = maelstrom::select(counts, six);
+                    six.clear();
+                    
+                    std::tie(counts, ix) = maelstrom::reduce_by_key(ix, counts, maelstrom::SUM, true);
+                }
+            }
+        } else if(this->matrix->get_format() == maelstrom::CSC) {
+            if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {
+                std::tie(ix, counts) = this->matrix->nnz_i(current_vertices, rel_types);
+            }
+            if(direction == gremlinxx::OUT || direction == gremlinxx::BOTH) {
+                this->to_canonical_csr();
+                maelstrom::vector ix_r;
+                maelstrom::vector counts_r;
+                std::tie(ix_r, counts_r) = this->matrix->nnz_i(current_vertices, rel_types);
+                if(ix.empty()) {
+                    ix = std::move(ix_r);
+                    counts = std::move(counts_r);
+                } else {
+                    ix.insert(ix_r);
+                    counts.insert(counts_r);
+                    ix_r.clear();
+                    counts_r.clear();
+                    
+                    auto six = maelstrom::sort(ix);
+                    counts = std::move(maelstrom::select(counts, six));
+                    six.clear();
+                    
+                    std::tie(counts, ix) = maelstrom::reduce_by_key(ix, counts, maelstrom::SUM, true);
+                }
+            }
+        }
+
+        return std::make_pair(
+            std::move(counts),
+            std::move(ix)
         );
     }
 
@@ -156,6 +238,38 @@ namespace bitgraph {
                 );
             }
             if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {
+                this->to_canonical_csc();
+
+                maelstrom::vector current_edges;
+                maelstrom::vector current_origin;
+                std::tie(current_edges, current_origin) = simple_e_adjacency_query(
+                    *this->matrix,
+                    current_vertices,
+                    rel_types
+                );
+
+                if(result_edges.empty()) {
+                    result_edges = std::move(current_edges);
+                    result_origin = std::move(current_origin);
+                } else {
+                    result_edges.insert(result_edges.size(), current_edges);
+                    current_edges.clear();
+
+                    result_origin.insert(result_origin.size(), current_origin);
+                    current_origin.clear();
+                }
+            }
+        } else if(this->matrix->get_format() == maelstrom::CSC) {
+            if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {
+                std::tie(result_edges, result_origin) = simple_e_adjacency_query(
+                    *this->matrix,
+                    current_vertices,
+                    rel_types
+                );
+            }
+            if(direction == gremlinxx::OUT || direction == gremlinxx::BOTH) {
+                this->to_canonical_csr();
+
                 maelstrom::vector current_edges;
                 maelstrom::vector current_origin;
                 std::tie(current_edges, current_origin) = simple_e_adjacency_query(
@@ -199,7 +313,6 @@ namespace bitgraph {
                 this->traverser_storage,
                 current_edges.size()
             );
-            for(size_t k = 0; k < 10; ++k) std::cout << std::any_cast<gremlinxx::Vertex>(result_vertices.get(k)).id << std::endl;
         }
 
         if(direction == gremlinxx::IN || direction == gremlinxx::BOTH) {

@@ -1,7 +1,6 @@
 #!/bin/bash
 
-if [$1 = "release"]
-then
+if [[ $1 = "release" ]]; then
     echo "Performing release build!"
     VERBOSE=1 cmake -GNinja .
     ninja -j4 all

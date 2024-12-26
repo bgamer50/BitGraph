@@ -16,6 +16,8 @@ set(CMAKE_CUDA_ARCHITECTURES "86")
 set(POSITION_INDEPENDENT_CODE True)
 set(INTERFACE_POSITION_INDEPENDENT_CODE True)
 
+find_package(Python 3.10 COMPONENTS Interpreter Development.Module REQUIRED)
+
 add_library(
     bitgraph SHARED
 
@@ -23,12 +25,14 @@ add_library(
     structure/BitGraph_access.cpp
     structure/BitGraph_convert.cpp
     structure/BitGraph_query.cpp
+    structure/BitGraph_index.cu
 
     traversal/BitGraphTraversalSource.cpp
 
     step/BitGraphVStep.cpp
     
     strategy/BitGraphStrategy.cpp
+    strategy/BitGraphSelectionStrategy.cpp
 )
 
 target_compile_options(
@@ -47,6 +51,7 @@ target_include_directories(
         "include/" # bitgraph path
         "../gremlin++" # gremlinxx path
         "../maelstrom/include" # maelstrom path
+        "../faiss" # faiss path
 )
 
 function(AddBitGraphExec EXEC_NAME)
@@ -64,6 +69,7 @@ function(AddBitGraphExec EXEC_NAME)
         PRIVATE
           "../maelstrom/" 
           "../gremlin++/"
+          "../faiss/build/faiss"
      )
 
     target_link_libraries(
@@ -72,6 +78,7 @@ function(AddBitGraphExec EXEC_NAME)
             bitgraph   
             gremlinxx
             maelstrom
+            faiss
     )
 
 endfunction()
@@ -103,6 +110,7 @@ function(AddBitGraphTest EXEC_NAME)
        PRIVATE
          "../maelstrom/" 
          "../gremlin++/"
+         "../faiss/build/faiss"
     )
 
     target_link_libraries(
@@ -111,10 +119,40 @@ function(AddBitGraphTest EXEC_NAME)
             bitgraph
             gremlinxx
             maelstrom
+            faiss
     )
 
 endfunction()
 
 AddBitGraphTest(
     "test_basic.exe" "test/test_basic.cpp"
+)
+
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+
+# Detect the installed nanobind package and import it into CMake
+execute_process(
+  COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+  OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR)
+list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+find_package(nanobind CONFIG REQUIRED)
+
+nanobind_add_module(pybitgraph bindings/PyBitGraph.cpp)
+target_link_libraries(
+    pybitgraph 
+    PRIVATE  
+        bitgraph 
+        gremlinxx 
+        maelstrom
+        faiss
+)
+target_link_directories(
+       pybitgraph
+       PRIVATE
+         "../maelstrom/" 
+         "../gremlin++/"
+         "../faiss/build/faiss"
 )

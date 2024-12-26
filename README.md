@@ -1,3 +1,10 @@
+Version 1.1.0 (December 2024)
+
+This release of BitGraph adds Python bindings and supports new features in Gremlin++, including better traversal strategies and optimizations.
+It also adds FAISS integration, and new examples which demonstrate QRAG, a query-based GraphRAG implementation.
+
+---------------------------------------------------------------
+
 Version 1.0.0 (September 26, 2023)
 
 This is a major refactor of BitGraph that uses _Maelstrom_ for almost all operations, including sparse matrix operations, vector operations, and hash tables.
